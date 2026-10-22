@@ -1,7 +1,14 @@
+import { Route, Router } from "@solidjs/router"
+import Home from "./pages/Home"
+import Entry from "./pages/Entry"
+
 function App() {
 
   return (
-    <div></div>
+    <Router>
+      <Route path="/" component={Home}/>
+      <Route path="/entry/:id" component={Entry}/>
+    </Router>
   )
 }
 
