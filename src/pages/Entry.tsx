@@ -1,6 +1,6 @@
 import { useParams } from "@solidjs/router";
 import { pb } from "../lib/pocketbase";
-import { createResource, Show } from "solid-js";
+import { createResource, Match, Switch } from "solid-js";
 
 // 1. Define the full interface including the 'body'
 interface Entry {
@@ -20,26 +20,32 @@ function Entry() {
     const [entry] = createResource(() => params.id, fetchEntry);
     return (
         <div>
-            <Show when={entry.loading}>
-                <p>Loading entry...</p>
-            </Show>
+            <Switch>
 
-            <Show when={entry.error}>
-                <p>Error loading entry: {entry.error.message}</p>
-            </Show>
+                <Match when={entry.loading}>
+                    <p>Loading entry...</p>
+                </Match>
 
-            {/* Use the callback pattern again to ensure 'entry' is fully loaded */}
-            <Show when={entry()}>
-                {(loadedEntry) => (
-                    <article>
-                        <h2>{loadedEntry().title}</h2>
-                        <small>{new Date(loadedEntry().created).toLocaleString()}</small>
+                <Match when={entry.error}>
+                    {/* 
+            If it's a 404, the createEffect will instantly redirect the user.
+            If it's a network error or 500, they will see this message.
+          */}
+                    <p>Could not load entry: {entry.error.message}</p>
+                </Match>
 
-                        {/* The full body is now available */}
-                        <p>{loadedEntry().body}</p>
-                    </article>
-                )}
-            </Show>
+                {/* This ONLY evaluates if loading is false AND error is false, preventing the crash */}
+                <Match when={entry()}>
+                    {(loadedEntry) => (
+                        <article>
+                            <h2>{loadedEntry().title}</h2>
+                            <small>{new Date(loadedEntry().created).toLocaleString()}</small>
+                            <p>{loadedEntry().body}</p>
+                        </article>
+                    )}
+                </Match>
+
+            </Switch>
         </div>
     )
 }

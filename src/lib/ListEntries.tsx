@@ -1,5 +1,6 @@
 import { createResource, For, Show } from "solid-js";
 import { pb } from "./pocketbase";
+import { useNavigate } from "@solidjs/router";
 
 interface EntrySummary {
     id: string;
@@ -20,11 +21,13 @@ function logOut() {
 
 function ListEntry() {
     const [entries, { refetch }] = createResource(fetchEntries);
+    const navigate = useNavigate();
     return (
         <div>
             <h2>My Diary Entries</h2>
             <button onClick={refetch}>Refresh</button>
             <button onClick={logOut}>Log Out</button>
+            <button onClick={ (_) => navigate("/write")}>Write Entry</button>
 
             {/* Handle Loading State */}
             <Show when={entries.loading}>

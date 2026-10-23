@@ -3,7 +3,11 @@ import { pb } from "./pocketbase";
 
 async function login(email: string, password: string) {
     //alert("I logged in with " + email + " and " + password);
-    await pb.collection("users").authWithPassword(email, password);
+    try {
+        await pb.collection("users").authWithPassword(email, password);
+    } catch (_) {
+        alert("Error: incorrect username or password");
+    }
 }
 
 function LoginForm() {
