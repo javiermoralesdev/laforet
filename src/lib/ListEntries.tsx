@@ -55,7 +55,7 @@ function ListEntry() {
             <ul>
                 <For
                     each={entries()}
-                    fallback={<li>No entries yet. Start writing!</li>}
+                    fallback={<p>No entries yet. Start writing!</p>}
                 >
                     {(entry) => (
                         <li>
