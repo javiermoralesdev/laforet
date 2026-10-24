@@ -11,7 +11,7 @@ interface EntrySummary {
 async function fetchEntries() {
     return await pb.collection("entries").getFullList<EntrySummary>({
         sort: "-created",
-        fields: "id,title,created" // Comma-separated list of exactly what you need
+        fields: "id,title,created" // Comma-separated list of exactly what I need
     });
 }
 
@@ -27,7 +27,7 @@ function ListEntry() {
             <h2>My Diary Entries</h2>
             <button onClick={refetch}>Refresh</button>
             <button onClick={logOut}>Log Out</button>
-            <button onClick={ (_) => navigate("/write")}>Write Entry</button>
+            <button onClick={(_) => navigate("/write")}>Write Entry</button>
 
             {/* Handle Loading State */}
             <Show when={entries.loading}>
