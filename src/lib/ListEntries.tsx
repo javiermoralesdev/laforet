@@ -61,7 +61,7 @@ function ListEntry() {
                         <li>
                             <h3><a href={"/entry/" + entry.id}>{entry.title}</a></h3>
                             <small>{new Date(entry.created).toLocaleString()}</small>
-                            <button >Edit</button>
+                            <button onClick={() => navigate("/edit/" + entry.id)}>Edit</button>
                             <button onClick={() => removeEntry(entry.id)}>Remove</button>
                         </li>
                     )}

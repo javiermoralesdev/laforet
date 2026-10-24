@@ -2,8 +2,7 @@ import { useParams } from "@solidjs/router";
 import { pb } from "../lib/pocketbase";
 import { createResource, Match, Switch } from "solid-js";
 
-// 1. Define the full interface including the 'body'
-interface Entry {
+interface EntryDetails {
     id: string;
     title: string;
     body: string;
@@ -11,7 +10,7 @@ interface Entry {
     author: string;
 }
 
-async function fetchEntry(id: string): Promise<Entry> {
+async function fetchEntry(id: string): Promise<EntryDetails> {
     return pb.collection("entries").getOne(id);
 }
 
@@ -51,3 +50,5 @@ function Entry() {
 }
 
 export default Entry;
+
+export type { EntryDetails }
