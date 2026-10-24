@@ -1,6 +1,7 @@
-import { createResource, For, Show } from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
 import { pb } from "./pocketbase";
 import { useNavigate } from "@solidjs/router";
+import Modal from "./Modal";
 
 interface EntrySummary {
     id: string;
@@ -22,6 +23,17 @@ function logOut() {
 function ListEntry() {
     const [entries, { refetch }] = createResource(fetchEntries);
     const navigate = useNavigate();
+
+    const [modalMessage, setModalMessage] = createSignal("");
+    const [isErrorOpen, setErrorOpen] = createSignal(false);
+
+    async function removeEntry(entryID: string) {
+        await pb.collection("entries").delete(entryID);
+        refetch();
+        setModalMessage("Entry successfully deleted");
+        setErrorOpen(true);
+    }
+
     return (
         <div>
             <h2>My Diary Entries</h2>
@@ -49,10 +61,19 @@ function ListEntry() {
                         <li>
                             <h3><a href={"/entry/" + entry.id}>{entry.title}</a></h3>
                             <small>{new Date(entry.created).toLocaleString()}</small>
+                            <button >Edit</button>
+                            <button onClick={() => removeEntry(entry.id)}>Remove</button>
                         </li>
                     )}
                 </For>
             </ul>
+            <Modal
+                isOpen={isErrorOpen()}
+                title="Info"
+                onClose={() => setErrorOpen(false)}
+            >
+                <p>{modalMessage()}</p>
+            </Modal>
         </div>
     );
 }
