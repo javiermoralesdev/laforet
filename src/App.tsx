@@ -5,12 +5,14 @@ import Write from "./pages/Write"
 import './App.scss'
 import Entry from "./pages/Entry"
 import EditEntry from "./pages/EditEntry"
+import SignUpForm from "./lib/SignUpForm"
 
 function App() {
 
   return (
     <Router>
       <Route path="/" component={Home} />
+      <Route path="/signup" component={SignUpForm} />
       <Route path="/entry/:id" component={Entry} />
       <Route path="/edit/:id" component={EditEntry} />
       <Route path="/write" component={Write} />

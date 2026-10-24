@@ -1,7 +1,9 @@
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { currentUser, pb } from "../lib/pocketbase";
 import Modal from "../lib/Modal";
 import { useNavigate } from "@solidjs/router";
+import { encryptText, vaultKey } from "../lib/crypto";
+import UnlockVault from "../lib/UnlockVault";
 
 
 export default function Write() {
@@ -25,9 +27,12 @@ export default function Write() {
             return; // Stop execution
         }
         try {
+            const key = vaultKey();
+            const encryptedTitle = await encryptText(title(), key!);
+            const encryptedBody = await encryptText(body(), key!);
             await pb.collection("entries").create({
-                title: title(),
-                body: body(),
+                title: encryptedTitle,
+                body: encryptedBody,
                 author: currentUser()?.id
             });
             setEntrySaved(true);
@@ -35,31 +40,34 @@ export default function Write() {
             setIsErrorOpen(true);
 
         } catch (_) {
-            setErrorMessage("There was an error saving the entry");
+            setErrorMessage("There was an error saving or encrypting the entry");
             setIsErrorOpen(true);
         }
 
     };
+
     return (
-        <div>
-            <form onSubmit={handleSubmit}>
-                <h1>Create your entry</h1>
-                <input type="text" placeholder="Title" onInput={(e) => setTitle(e.currentTarget.value)} />
-                <textarea name="" id="" placeholder="Speak your mind..." rows={25} onInput={(e) => setBody(e.currentTarget.value)}></textarea>
-                <input type="submit" value="Agregar" />
-            </form>
-            <Modal
-                isOpen={isErrorOpen()}
-                onClose={() => {
-                    setIsErrorOpen(false);
-                    if (entrySaved()) {
-                        navigate("/");
-                    }
-                }}
-                title="Info"
-            >
-                <p>{errorMessage()}</p>
-            </Modal>
-        </div>
+        <Show when={vaultKey()} fallback={<UnlockVault/>}>
+            <div>
+                <form onSubmit={handleSubmit}>
+                    <h1>Create your entry</h1>
+                    <input type="text" placeholder="Title" onInput={(e) => setTitle(e.currentTarget.value)} />
+                    <textarea name="" id="" placeholder="Speak your mind..." rows={25} onInput={(e) => setBody(e.currentTarget.value)}></textarea>
+                    <input type="submit" value="Agregar" />
+                </form>
+                <Modal
+                    isOpen={isErrorOpen()}
+                    onClose={() => {
+                        setIsErrorOpen(false);
+                        if (entrySaved()) {
+                            navigate("/");
+                        }
+                    }}
+                    title="Info"
+                >
+                    <p>{errorMessage()}</p>
+                </Modal>
+            </div>
+        </Show>
     );
 }

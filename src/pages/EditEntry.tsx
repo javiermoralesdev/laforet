@@ -1,8 +1,10 @@
 import { useNavigate, useParams } from "@solidjs/router";
-import { createEffect, createResource, createSignal } from "solid-js";
+import { createEffect, createResource, createSignal, Show } from "solid-js";
 import { currentUser, pb } from "../lib/pocketbase";
 import Modal from "../lib/Modal";
 import type { EntryDetails } from "./Entry";
+import { decryptText, encryptText, vaultKey } from "../lib/crypto";
+import UnlockVault from "../lib/UnlockVault";
 
 async function fetchEntry(id: string): Promise<EntryDetails> {
     return pb.collection("entries").getOne(id);
@@ -20,8 +22,9 @@ export default function EditEntry() {
 
     const [entry] = createResource(() => params.id, fetchEntry);
 
+
     // Watch for successful loads, missing params, and fetch errors
-    createEffect(() => {
+    createEffect(async () => {
         if (!params.id) {
             setErrorMessage("No entry ID provided in the URL.");
             setShouldRedirect(true);
@@ -36,10 +39,25 @@ export default function EditEntry() {
             return;
         }
 
+        const key = vaultKey();
+        if (!key) {
+            return;
+        }
+
         const data = entry();
         if (data) {
-            setTitle(data.title);
-            setBody(data.body);
+            try {
+                // Decrypt the data before setting it to the state
+                const plainTitle = await decryptText(data.title, key);
+                const plainBody = await decryptText(data.body, key);
+
+                setTitle(plainTitle);
+                setBody(plainBody);
+            } catch (err) {
+                setErrorMessage("Failed to decrypt entry. Wrong vault password?");
+                setShouldRedirect(true);
+                setIsErrorOpen(true);
+            }
         }
     });
 
@@ -54,7 +72,6 @@ export default function EditEntry() {
         }
 
         try {
-            // Failsafe in case params.id is empty during submit
             if (!params.id) {
                 setErrorMessage("No entry ID provided.");
                 setShouldRedirect(true);
@@ -62,9 +79,18 @@ export default function EditEntry() {
                 return;
             }
 
+            // 1. Get the key
+            const key = vaultKey();
+            if (!key) return;
+
+            // 2. Encrypt the signals
+            const encryptedTitle = await encryptText(title(), key);
+            const encryptedBody = await encryptText(body(), key);
+
+            // 3. Save the encrypted data
             await pb.collection("entries").update(params.id, {
-                title: title(),
-                body: body(),
+                title: encryptedTitle,
+                body: encryptedBody,
                 author: currentUser()?.id
             });
 
@@ -79,47 +105,46 @@ export default function EditEntry() {
     };
 
     return (
-        <div>
-            <form onSubmit={handleSubmit}>
-                <h1>Edit your entry</h1>
-                <input
-                    type="text"
-                    placeholder="Title"
-                    value={title()}
-                    onInput={(e) => setTitle(e.currentTarget.value)}
-                    disabled={entry.loading || !!entry.error}
-                />
-
-                <textarea
-                    name=""
-                    id=""
-                    placeholder="Speak your mind..."
-                    rows={25}
-                    value={body()}
-                    onInput={(e) => setBody(e.currentTarget.value)}
-                    disabled={entry.loading || !!entry.error}
-                ></textarea>
-
-                <input
-                    type="submit"
-                    value="Guardar"
-                    disabled={entry.loading || !!entry.error}
-                />
-            </form>
-
-            <Modal
-                isOpen={isErrorOpen()}
-                onClose={() => {
-                    setIsErrorOpen(false);
-                    // This now handles both save success and load failure
-                    if (shouldRedirect()) {
-                        navigate("/");
-                    }
-                }}
-                title="Info"
-            >
-                <p>{errorMessage()}</p>
-            </Modal>
-        </div>
+        <Show when={vaultKey()} fallback={<UnlockVault />}>
+            <div>
+                <form onSubmit={handleSubmit}>
+                    <h1>Edit your entry</h1>
+                    <input
+                        type="text"
+                        placeholder="Title"
+                        value={title()}
+                        onInput={(e) => setTitle(e.currentTarget.value)}
+                        disabled={entry.loading || !!entry.error}
+                    />
+                    <textarea
+                        name=""
+                        id=""
+                        placeholder="Speak your mind..."
+                        rows={25}
+                        value={body()}
+                        onInput={(e) => setBody(e.currentTarget.value)}
+                        disabled={entry.loading || !!entry.error}
+                    ></textarea>
+                    <input
+                        type="submit"
+                        value="Guardar"
+                        disabled={entry.loading || !!entry.error}
+                    />
+                </form>
+                <Modal
+                    isOpen={isErrorOpen()}
+                    onClose={() => {
+                        setIsErrorOpen(false);
+                        // This now handles both save success and load failure
+                        if (shouldRedirect()) {
+                            navigate("/");
+                        }
+                    }}
+                    title="Info"
+                >
+                    <p>{errorMessage()}</p>
+                </Modal>
+            </div>
+        </Show>
     );
 }
