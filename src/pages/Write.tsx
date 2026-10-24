@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import { currentUser, pb } from "../lib/pocketbase";
 import Modal from "../lib/Modal";
+import { useNavigate } from "@solidjs/router";
 
 
 export default function Write() {
@@ -10,6 +11,8 @@ export default function Write() {
     // 1. State for your custom modal
     const [isErrorOpen, setIsErrorOpen] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
+    const [entrySaved, setEntrySaved] = createSignal(false);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
@@ -21,11 +24,20 @@ export default function Write() {
             setIsErrorOpen(true);
             return; // Stop execution
         }
-        await pb.collection("entries").create({
-            title: title(),
-            body: body(),
-            author: currentUser()?.id
-        });
+        try {
+            await pb.collection("entries").create({
+                title: title(),
+                body: body(),
+                author: currentUser()?.id
+            });
+            setEntrySaved(true);
+            setErrorMessage("Sucessfully save the entry");
+            setIsErrorOpen(true);
+
+        } catch (_) {
+            setErrorMessage("There was an error saving the entry");
+            setIsErrorOpen(true);
+        }
 
     };
     return (
@@ -38,7 +50,12 @@ export default function Write() {
             </form>
             <Modal
                 isOpen={isErrorOpen()}
-                onClose={() => setIsErrorOpen(false)}
+                onClose={() => {
+                    setIsErrorOpen(false);
+                    if (entrySaved()) {
+                        navigate("/");
+                    }
+                }}
                 title="Info"
             >
                 <p>{errorMessage()}</p>
