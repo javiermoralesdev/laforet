@@ -37,7 +37,7 @@ export default function Write() {
                 author: currentUser()?.id
             });
             setEntrySaved(true);
-            setErrorMessage("Sucessfully save the entry");
+            setErrorMessage("Successfully saved the entry");
             setIsErrorOpen(true);
 
         } catch (_) {
@@ -59,7 +59,7 @@ export default function Write() {
                         class={styles.bodyInput}></textarea>
 
                     <div class={styles.footer}>
-                        <input class={styles.saveBtn} type="submit" value="Agregar" />
+                        <input class={styles.saveBtn} type="submit" value="Save" />
                     </div>
                 </form>
                 <Modal
