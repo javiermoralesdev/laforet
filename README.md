@@ -9,6 +9,7 @@
 [![PocketBase](https://img.shields.io/badge/PocketBase-0.28-b8db57?style=flat-square&logo=pocketbase&logoColor=black)](https://pocketbase.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Web Crypto API](https://img.shields.io/badge/Crypto-AES--GCM%20256-darkgreen?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 [![Docker Ready](https://img.shields.io/badge/Docker-Single%20Container-blue?style=flat-square&logo=docker)](https://www.docker.com/)
 
 [Features](#-features) • [Why Carmen Laforet?](#-the-name) • [Security & Cryptography](#-how-the-cryptography-works) • [Quick Start](#-quick-start) • [Docker Deployment](#-docker-deployment) • [Testing](#-testing)
@@ -261,4 +262,4 @@ Contributions, feedback, and security reviews are warmly welcome!
 
 ## 📜 License
 
-Distributed under the [MIT License](LICENSE). Feel free to use, self-host, and adapt for your own private journaling needs.
+This project is licensed under the **GNU General Public License v3.0** — see the [LICENSE](LICENSE) file for details. Free software to protect your privacy and ensure your code remains free forever.
