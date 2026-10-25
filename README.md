@@ -12,7 +12,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 [![Docker Ready](https://img.shields.io/badge/Docker-Single%20Container-blue?style=flat-square&logo=docker)](https://www.docker.com/)
 
-[Features](#-features) • [Why Carmen Laforet?](#-the-name) • [Security & Cryptography](#-how-the-cryptography-works) • [Quick Start](#-quick-start) • [Docker Deployment](#-docker-deployment) • [Testing](#-testing)
+[Features](#-features) • [Why Carmen Laforet?](#-the-name) • [Security & Cryptography](#-how-the-cryptography-works) • [Quick Start](#-quick-start) • [Docker Deployment](#-docker-deployment) • [Testing](#-testing) • [AI Disclosure](#-ai-disclosure)
 
 </div>
 
@@ -254,6 +254,13 @@ Contributions, feedback, and security reviews are warmly welcome!
 4. Push to the branch (`git push origin feature/my-thoughtful-feature`)
 5. Open a Pull Request
 
+---
+
+## 🤖 AI Disclosure
+
+In the spirit of openness: generative AI tools were used during development, for CSS/SCSS styling and UI polish, the Docker and CI setup, a PocketBase hook that blocks signups server-side, and the app icon. 
+
+The core application architecture, the cryptographic implementation (Web Crypto API, PBKDF2 key derivation, AES-GCM, in-memory vault management), database schemas and business logic were written and tested by me. The cryptography has not been independently audited.
 ---
 
 ## 📜 License
