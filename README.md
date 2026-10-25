@@ -9,6 +9,7 @@
 [![PocketBase](https://img.shields.io/badge/PocketBase-0.40.6-b8db57?style=flat-square&logo=pocketbase&logoColor=black)](https://pocketbase.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Web Crypto API](https://img.shields.io/badge/Crypto-AES--GCM%20256-darkgreen?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
+[![PBKDF2 Iterations](https://img.shields.io/badge/PBKDF2-600k%20rounds-darkgreen?style=flat-square)](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
 [![Docker Ready](https://img.shields.io/badge/Docker-Single%20Container-blue?style=flat-square&logo=docker)](https://www.docker.com/)
 
@@ -30,8 +31,11 @@ This project is built to be a safe, inviolable digital counterpart to that priva
 
 ## ✨ Features
 
-- 🔒 **Zero-Knowledge Encryption**: All titles and diary entries are encrypted on your device using the native **Web Crypto API** before ever being transmitted over the network.
-- 🧠 **Memory-Only Key Storage**: The encryption key is derived locally in memory during your active session. It is never written to `localStorage`, session storage, or cookies, and it is wiped immediately on sign-out.
+- 🔒 **Zero-Knowledge Architecture**: All diary entries are encrypted locally on your device with **AES-GCM-256** before touching the network.
+- 🛡️ **Zero-Knowledge Authentication**: The server never sees your actual master password. Your password is used locally to derive an isolated authentication token (`authSecret`), ensuring true zero-knowledge authentication.
+- ⚙️ **OWASP-Hardened Key Derivation**: Uses **PBKDF2-HMAC-SHA256 with 600,000 iterations** combined with **HKDF-SHA256** domain separation to isolate login credentials from encryption keys.
+- 🧠 **Memory-Only Key Storage**: Non-extractable encryption keys live strictly in client memory during your active session. Never persisted to `localStorage`, session storage, or cookies.
+- 🏷️ **Versioned Authenticated Ciphertext (`v1`)**: Every entry is protected with a fresh 12-byte random IV and a 16-byte GCM authentication tag (`v1:<iv>:<ciphertext>`), guaranteeing tamper detection and protocol version stability.
 - 🐦 **Cryptographic Canary Verification**: Unlocks your vault seamlessly by testing the key against an encrypted canary token (`vaultCheck`) without exposing sensitive data.
 - ✍️ **Markdown Editor with Live Preview**: Draft your reflections with full Markdown support, clean typography, and a toggleable preview tab.
 - 🌍 **Bilingual by Nature**: Native internationalization in **English** and **Spanish** with an instant in-app language switcher.
@@ -43,34 +47,46 @@ This project is built to be a safe, inviolable digital counterpart to that priva
 
 ## 🔐 How the Cryptography Works
 
-Laforet follows a strict **zero-knowledge, client-side encryption** model:
+Laforet follows a modern **zero-knowledge cryptographic architecture** using the native **Web Crypto API**. The server only ever sees a derived authentication token—your actual master password and raw diary entries **never leave your device**.
+
+### Key Hierarchy & Domain Separation
 
 ```
-[ User Password ] + [ Salt: User ID ]
-                │
-                ▼
-     PBKDF2 (SHA-256, 100,000 iterations)
-                │
-                ▼
-        [ AES-GCM 256-bit Key ]
-         (Kept in memory only)
-                │
-    ┌───────────┴───────────────────────────┐
-    ▼                                       ▼
-[ Encrypt Entry ]                     [ Unlock Vault ]
-- Generate random 12-byte IV           - Attempt decrypting user's `vaultCheck`
-- Encrypt title & markdown body        - If successful: key retained in memory
-- Format: `ivHex:ciphertextHex`        - If failed: access denied
-    │
-    ▼
-[ Stored in PocketBase Database ]
-(Server only ever sees random hex strings)
+[ User Password ] + [ Salt: "laforet:v1:" + normalizeEmail(email) ]
+                               │
+                               ▼
+            PBKDF2-HMAC-SHA256 (600,000 iterations)
+                               │
+                               ▼
+                    [ 256-bit Master Key ]
+                   (Never leaves the device)
+                               │
+                 HKDF-SHA256 Domain Separation
+                               │
+         ┌─────────────────────┴─────────────────────┐
+         ▼                                           ▼
+   info: "laforet-auth-v1"                     info: "laforet-enc-v1"
+         │                                           │
+         ▼                                           ▼
+    [ authSecret ]                               [ encKey ]
+ (64-char hex string)                     (AES-GCM 256-bit Key)
+         │                                           │
+         ▼                                           ▼
+Sent to PocketBase as the                 Held in client memory only;
+account "password"                        encrypts & decrypts diary entries
 ```
 
-1. **Key Derivation**: When you sign up or unlock your vault, your password and your unique User ID (salt) are fed into **PBKDF2** with 100,000 iterations using **SHA-256**, deriving an **AES-GCM 256-bit** key.
-2. **Deterministic Canary Check**: On signup, a canary string (`"success"`) is encrypted with your key and stored in your user record as `vaultCheck`. When unlocking your vault on subsequent visits, the client verifies your password by attempting to decrypt this canary.
-3. **Unique Initialization Vectors**: Every single entry is encrypted with its own cryptographically secure, pseudo-random 12-byte Initialization Vector (IV). Even if two entries share the exact same content, their stored ciphertexts will look completely different.
-4. **Server Blindness**: PocketBase only receives and stores the combined string `<iv_hex>:<ciphertext_hex>`. Without your password, the database contains only mathematically unrecoverable noise.
+1. **Email Normalization & Salt**: Emails are stripped of whitespace and lowercased (`normalizeEmail`), then combined with a versioned domain prefix (`"laforet:v1:" + normalized_email`). This ensures identical, deterministic salt generation across every client device.
+2. **Master Key Derivation (PBKDF2)**: The user password is run through **PBKDF2-HMAC-SHA256** with **600,000 iterations** (exceeding OWASP password storage recommendations) to generate a high-entropy 256-bit master key.
+3. **HKDF Domain Separation**: Using **HKDF-SHA256**, the master key is split into two cryptographically independent secrets:
+   - **`authSecret`**: Derived with context info `"laforet-auth-v1"`. This 64-character hex string is sent to PocketBase as the account password. PocketBase authenticates the user, but *never* learns their master password. Even if `authSecret` were compromised, an attacker cannot mathematically deduce `encKey`.
+   - **`encKey`**: Derived with context info `"laforet-enc-v1"`. A non-extractable **AES-GCM 256-bit** key that stays strictly in device memory during an active session and is wiped immediately upon logout.
+4. **Versioned Authenticated Encryption (AES-GCM)**: Each entry is encrypted with its own fresh, cryptographically secure 12-byte initialization vector (IV) and protected by a 16-byte GCM authentication tag:
+   ```
+   v1:<12-byte-hex-iv>:<hex-ciphertext-and-16-byte-gcm-tag>
+   ```
+   The `v1:` prefix provides explicit protocol versioning, strict format verification, and tampering rejection.
+5. **Deterministic Canary Check**: On signup, a canary string (`"success"`) is encrypted with `encKey` and stored in the user record as `vaultCheck`. When unlocking the vault, the client tests `encKey` against this token to verify credentials before loading entries.
 
 > [!WARNING]
 > **There is no "Forgot Password" link.**  
@@ -200,10 +216,10 @@ Laforet includes both cryptographic unit tests and browser-based end-to-end test
 
 ### Cryptographic Unit Tests (Vitest)
 
-Verifies PBKDF2 key derivation, AES-GCM encryption/decryption, wrong-password rejection, and unique IV generation:
+Verifies the complete v1 cryptographic suite against known-answer vectors generated by an independent reference implementation (Python `hashlib` / `cryptography`). Validates PBKDF2 key derivation (600,000 rounds), HKDF domain separation (`authSecret` vs. `encKey`), email normalization, AES-GCM encryption/decryption, unique IV generation, and ciphertext tamper detection:
 
 ```bash
-bun test
+bun run vitest run src/lib/crypto.test.ts
 # or: npm test
 ```
 
