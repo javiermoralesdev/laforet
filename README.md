@@ -138,7 +138,6 @@ Laforet is packaged as a single self-contained image that bundles both the Solid
 ### Run with Docker CLI
 
 ```bash
-docker build -t laforet .
 
 docker run -d \
   -p 8090:8090 \
@@ -147,7 +146,7 @@ docker run -d \
   -e PB_ADMIN_PASSWORD=your_secure_password_here \
   -e VITE_DISABLE_SIGNUPS=false \
   --name laforet-app \
-  laforet
+  javiermorales/laforet:latest
 ```
 
 Your diary is now live at `http://localhost:8090`. The PocketBase admin dashboard can be accessed at `http://localhost:8090/_/`.
@@ -161,7 +160,7 @@ version: "3.8"
 
 services:
   laforet:
-    build: .
+    image: javiermorales/laforet:latest   # or pin a version, e.g. 1.0.0
     container_name: laforet
     restart: unless-stopped
     ports:
@@ -173,7 +172,7 @@ services:
       # Set to "true" to lock down new registrations
       VITE_DISABLE_SIGNUPS: "false"
     volumes:
-      - laforet_data:/pb/pb_data
+      - /path/to/your/data:/pb/pb_data
 
 volumes:
   laforet_data:
