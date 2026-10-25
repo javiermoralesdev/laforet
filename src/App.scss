@@ -3,10 +3,29 @@
     font-family: "Nanum Gothic", sans-serif;
     font-weight: 400;
     font-style: normal;
+    --bg-color: #f8f9fa;
+    --text-main: #212529;
+    --primary-accent: #3b82f6;
+    --surface-color: #ffffff;
 }
 
 form {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.6;
+}
+
+/* Global button reset */
+button {
+    cursor: pointer;
+    font-family: inherit;
 }

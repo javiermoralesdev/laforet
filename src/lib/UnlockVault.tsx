@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { pb, currentUser } from "../lib/pocketbase";
 import { deriveKey, decryptText } from "../lib/crypto";
 import { setVaultKey } from "../lib/crypto";
+import styles from './Auth.module.scss';
 
 export default function UnlockVault() {
     const [password, setPassword] = createSignal("");
@@ -35,16 +36,20 @@ export default function UnlockVault() {
     };
 
     return (
-        <form onSubmit={handleUnlock}>
-            <h2>Unlock your Diary</h2>
-            <input
-                type="password"
-                placeholder="Vault Password"
-                value={password()}
-                onInput={(e) => setPassword(e.currentTarget.value)}
-            />
-            <button type="submit">Unlock</button>
-            {error() && <p style={{ color: "red" }}>{error()}</p>}
-        </form>
+        <div class={styles.authContainer}>
+            <div class={styles.authCard}>
+                <form onSubmit={handleUnlock}>
+                    <h2>Unlock your Diary</h2>
+                    <input
+                        type="password"
+                        placeholder="Vault Password"
+                        value={password()}
+                        onInput={(e) => setPassword(e.currentTarget.value)}
+                    />
+                    <button class={styles.primaryBtn} type="submit">Unlock</button>
+                    {error() && <p style={{ color: "red" }}>{error()}</p>}
+                </form>
+            </div>
+        </div>
     );
 }

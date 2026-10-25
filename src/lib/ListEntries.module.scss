@@ -1,0 +1,188 @@
+/* src/components/ListEntries.module.scss */
+
+.dashboard {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #f1f3f5;
+    margin-bottom: 2rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.75rem;
+      color: var(--text-main);
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+
+      /* Base button styles shared by all header actions */
+      button {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+
+        &:active {
+          transform: scale(0.97);
+        }
+      }
+
+      /* Secondary: For safe, routine actions (Refresh) */
+      .secondaryBtn {
+        background-color: #f8f9fa;
+        color: #495057;
+        border-color: #dee2e6;
+
+        &:hover {
+          background-color: #e9ecef;
+        }
+      }
+
+      /* Danger Outline: For destructive or exit actions (Log Out) */
+      .dangerBtn {
+        background-color: transparent;
+        color: #fa5252;
+        border-color: #fa5252;
+
+        &:hover {
+          background-color: #fa5252;
+          color: white;
+        }
+      }
+
+      /* Primary: The main call-to-action (Write Entry) */
+      .primaryBtn {
+        background-color: var(--primary-accent);
+        color: white;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+
+        &:hover {
+          background-color: #2563eb;
+          /* A slightly darker blue */
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px rgba(59, 130, 246, 0.4);
+        }
+      }
+    }
+  }
+
+  .entryList {
+    list-style: none;
+    padding: 0;
+
+    .entryCard {
+      background: var(--surface-color);
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1rem;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+
+      h3 {
+        margin-top: 0;
+
+        a {
+          text-decoration: none;
+          color: inherit;
+
+          &:hover {
+            color: var(--primary-accent);
+          }
+        }
+      }
+    }
+  }
+}
+
+.entryCard {
+  background: var(--surface-color); // Assuming you set this in global.scss
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+  margin-bottom: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  /* Flexbox Layout to split left/right */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .entryInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+
+      a {
+        text-decoration: none;
+        color: var(--text-main);
+
+        &:hover {
+          color: var(--primary-accent);
+          text-decoration: underline;
+        }
+      }
+    }
+
+    small {
+      color: #6c757d; // Muted gray for the date
+      font-size: 0.85rem;
+    }
+  }
+
+  .entryActions {
+    display: flex;
+    gap: 0.5rem;
+
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: background-color 0.2s;
+
+      // Default (Edit) button styling
+      background-color: #f1f3f5;
+      color: #495057;
+
+      &:hover {
+        background-color: #e2e6ea;
+      }
+    }
+
+    .deleteBtn {
+      // Danger styling for the remove button
+      background-color: #ffe3e3;
+      color: #fa5252;
+
+      &:hover {
+        background-color: #ffa8a8;
+      }
+    }
+  }
+}

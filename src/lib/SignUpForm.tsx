@@ -3,6 +3,7 @@ import { createSignal } from "solid-js";
 import { currentUser, pb } from "../lib/pocketbase";
 import Modal from "../lib/Modal";
 import { deriveKey, encryptText, setVaultKey } from "./crypto";
+import styles from "./Auth.module.scss";
 
 export default function SignUpForm() {
     const navigate = useNavigate();
@@ -79,53 +80,49 @@ export default function SignUpForm() {
 
     // Otherwise, render the form normally
     return (
-        <div>
-            <form onSubmit={handleSubmit}>
-                <h1>Sign Up</h1>
-
-                <input
-                    type="text"
-                    placeholder="Name"
-                    value={name()}
-                    onInput={(e) => setName(e.currentTarget.value)}
-                />
-
-                <input
-                    type="email"
-                    placeholder="Email"
-                    value={email()}
-                    onInput={(e) => setEmail(e.currentTarget.value)}
-                />
-
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password()}
-                    onInput={(e) => setPassword(e.currentTarget.value)}
-                />
-
-                <input
-                    type="password"
-                    placeholder="Repeat Password"
-                    value={passwordConfirm()}
-                    onInput={(e) => setPasswordConfirm(e.currentTarget.value)}
-                />
-
-                <input type="submit" value="Registrarse" />
-            </form>
-
-            <Modal
-                isOpen={isModalOpen()}
-                onClose={() => {
-                    setIsModalOpen(false);
-                    if (shouldRedirect()) {
-                        navigate("/"); // Send them to the login page after success
-                    }
-                }}
-                title="Info"
-            >
-                <p>{modalMessage()}</p>
-            </Modal>
+        <div class={styles.authContainer}>
+            <div class={styles.authCard}>
+                <form onSubmit={handleSubmit}>
+                    <h1>Sign Up</h1>
+                    <input
+                        type="text"
+                        placeholder="Name"
+                        value={name()}
+                        onInput={(e) => setName(e.currentTarget.value)}
+                    />
+                    <input
+                        type="email"
+                        placeholder="Email"
+                        value={email()}
+                        onInput={(e) => setEmail(e.currentTarget.value)}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        value={password()}
+                        onInput={(e) => setPassword(e.currentTarget.value)}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Repeat Password"
+                        value={passwordConfirm()}
+                        onInput={(e) => setPasswordConfirm(e.currentTarget.value)}
+                    />
+                    <input class={styles.primaryBtn} type="submit" value="Registrarse" />
+                </form>
+                <Modal
+                    isOpen={isModalOpen()}
+                    onClose={() => {
+                        setIsModalOpen(false);
+                        if (shouldRedirect()) {
+                            navigate("/"); // Send them to the login page after success
+                        }
+                    }}
+                    title="Info"
+                >
+                    <p>{modalMessage()}</p>
+                </Modal>
+            </div>
         </div>
     );
 }

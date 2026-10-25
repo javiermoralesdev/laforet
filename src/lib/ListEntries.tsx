@@ -5,6 +5,7 @@ import Modal from "./Modal";
 // Asegúrate de importar decryptText desde tu archivo crypto
 import { vaultKey, decryptText } from "./crypto";
 import UnlockVault from "./UnlockVault";
+import styles from './ListEntries.module.scss'
 
 interface EntrySummary {
     id: string;
@@ -58,11 +59,21 @@ function ListEntry() {
 
     return (
         <Show when={vaultKey()} fallback={<UnlockVault />}>
-            <div>
-                <h2>My Diary Entries</h2>
-                <button onClick={refetch}>Refresh</button>
-                <button onClick={logOut}>Log Out</button>
-                <button onClick={(_) => navigate("/write")}>Write Entry</button>
+            <div class={styles.dashboard}>
+                <div class={styles.header}>
+                    <h2>My Diary Entries</h2>
+                    <div class={styles.actions}>
+                        <button class={styles.secondaryBtn} onClick={refetch}>
+                            Refresh
+                        </button>
+                        <button class={styles.dangerBtn} onClick={logOut}>
+                            Log Out
+                        </button>
+                        <button class={styles.primaryBtn} onClick={(_) => navigate("/write")}>
+                            Write Entry
+                        </button>
+                    </div>
+                </div>
                 {/* Handle Loading State  */}
                 <Show when={entries.loading}>
                     <p>Loading your thoughts...</p>
@@ -72,18 +83,22 @@ function ListEntry() {
                     <p>Error: {entries.error.message}</p>
                 </Show>
                 {/* 4. Render the list using <For>  */}
-                <ul>
+                <ul class={styles.entryList}>
                     <For
                         each={entries()}
                         fallback={<p>No entries yet. Start writing!</p>}
                     >
                         {(entry) => (
-                            <li>
+                            <li class={styles.entryCard}>
                                 {/* El título ya está desencriptado gracias al fetcher */}
-                                <h3><a href={"/entry/" + entry.id}>{entry.title}</a></h3>
-                                <small>{new Date(entry.created).toLocaleString()}</small>
-                                <button onClick={() => navigate("/edit/" + entry.id)}>Edit</button>
-                                <button onClick={() => removeEntry(entry.id)}>Remove</button>
+                                <div class={styles.entryInfo}>
+                                    <h3><a href={"/entry/" + entry.id}>{entry.title}</a></h3>
+                                    <small>{new Date(entry.created).toLocaleString()}</small>
+                                </div>
+                                <div class={styles.entryActions}>
+                                    <button onClick={() => navigate("/edit/" + entry.id)}>Edit</button>
+                                    <button class={styles.deleteBtn} onClick={() => removeEntry(entry.id)}>Remove</button>
+                                </div>
                             </li>
                         )}
                     </For>
