@@ -60,5 +60,7 @@ export const es = {
     editor_err_decrypt: "Error al desencriptar. ¿Contraseña de bóveda incorrecta?",
 
     // NotFound
-    not_found: "Ups. No hay nada que ver aquí ;)"
+    not_found: "Ups. No hay nada que ver aquí ;)",
+    signup_warning_title: "LEER ANTES DE CREAR LA CUENTA",
+    signup_warning_desc: "Los datos se encriptan de extremo a extremo. Lo que significa que, en caso de perder la contraseña, es matemáticamente imposible recuperar la información. Tu diario se perdería como ruido para siempre",
 };

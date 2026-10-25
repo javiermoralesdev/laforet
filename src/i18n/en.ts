@@ -60,5 +60,7 @@ export const en = {
     editor_err_decrypt: "Failed to decrypt entry. Wrong vault password?",
 
     // NotFound
-    not_found: "Whoops. Nothing to see here ;)"
+    not_found: "Whoops. Nothing to see here ;)",
+    signup_warning_title: "READ BEFORE CREATING THE ACCOUNT",
+    signup_warning_desc: "The data is end-to-end encrypted. Which means that, is you lose the password, it's mathematically impossible to retrieve. You diary would be lost as random noise forever"
 };

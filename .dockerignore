@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.git/
+.env
+.vite/
+pb_data/
+laforet_data/
+playwright-report/
+test-results/

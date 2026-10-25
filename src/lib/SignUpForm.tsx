@@ -9,7 +9,8 @@ import styles from "./Auth.module.scss";
 export default function SignUpForm() {
     const { t } = useLocale();
     const navigate = useNavigate();
-    const signupsDisabled = import.meta.env.VITE_DISABLE_SIGNUPS === "true";
+    // Replace the old import.meta.env line with this:
+    const signupsDisabled = (window as any).__ENV__?.VITE_DISABLE_SIGNUPS === "true" || import.meta.env.VITE_DISABLE_SIGNUPS === "true";
     const [name, setName] = createSignal("");
     const [email, setEmail] = createSignal("");
     const [password, setPassword] = createSignal("");
@@ -41,7 +42,7 @@ export default function SignUpForm() {
             const encryptedCanary = await encryptText("success", key);
             await pb.collection("users").update(currentUser()?.id || "", { vaultCheck: encryptedCanary });
             setVaultKey(key);
-            
+
             setShouldRedirect(true);
             setModalMessage(t("signup_success"));
             setIsModalOpen(true);
@@ -69,6 +70,23 @@ export default function SignUpForm() {
                     <input type="email" placeholder={t("login_email")} value={email()} onInput={(e) => setEmail(e.currentTarget.value)} />
                     <input type="password" placeholder={t("login_password")} value={password()} onInput={(e) => setPassword(e.currentTarget.value)} />
                     <input type="password" placeholder={t("signup_repeat_password")} value={passwordConfirm()} onInput={(e) => setPasswordConfirm(e.currentTarget.value)} />
+
+                    {/* The Warning Callout */}
+                    <div style={{
+                        "background-color": "#fff3cd",
+                        color: "#856404",
+                        padding: "1rem",
+                        "border-radius": "8px",
+                        border: "1px solid #ffeeba",
+                        "font-size": "0.9rem",
+                        "line-height": "1.4"
+                    }}>
+                        <strong style={{ display: "block", "margin-bottom": "0.5rem" }}>
+                            {t("signup_warning_title")}
+                        </strong>
+                        {t("signup_warning_desc")}
+                    </div>
+
                     <input class={styles.primaryBtn} type="submit" value={t("signup_submit")} />
                 </form>
                 <Modal isOpen={isModalOpen()} title={t("info")} onClose={() => { setIsModalOpen(false); if (shouldRedirect()) navigate("/"); }}>

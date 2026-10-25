@@ -8,22 +8,23 @@ import styles from "./Auth.module.scss";
 
 export default function LoginForm() {
     const { t } = useLocale();
-    const signupsDisabled = import.meta.env.VITE_DISABLE_SIGNUPS === "true"; 
-    const [email, setEmail] = createSignal(""); 
-    const [password, setPassword] = createSignal(""); 
-    const [isErrorOpen, setIsErrorOpen] = createSignal(false); 
-    const [errorMessage, setErrorMessage] = createSignal(""); 
-    const navigate = useNavigate(); 
+    // Replace the old import.meta.env line with this:
+    const signupsDisabled = (window as any).__ENV__?.VITE_DISABLE_SIGNUPS === "true" || import.meta.env.VITE_DISABLE_SIGNUPS === "true";
+    const [email, setEmail] = createSignal("");
+    const [password, setPassword] = createSignal("");
+    const [isErrorOpen, setIsErrorOpen] = createSignal(false);
+    const [errorMessage, setErrorMessage] = createSignal("");
+    const navigate = useNavigate();
 
     const login = async (e: Event) => {
         e.preventDefault();
         try {
-            await pb.collection("users").authWithPassword(email(), password()); 
-            const key = await deriveKey(password(), currentUser()?.id || ""); 
-            setVaultKey(key); 
+            await pb.collection("users").authWithPassword(email(), password());
+            const key = await deriveKey(password(), currentUser()?.id || "");
+            setVaultKey(key);
         } catch (error) {
-            setErrorMessage(t("login_error")); 
-            setIsErrorOpen(true); 
+            setErrorMessage(t("login_error"));
+            setIsErrorOpen(true);
         }
     }
 
@@ -35,14 +36,14 @@ export default function LoginForm() {
                     <input
                         type="email"
                         placeholder={t("login_email")}
-                        value={email()} 
-                        onInput={(e) => setEmail(e.currentTarget.value)} 
+                        value={email()}
+                        onInput={(e) => setEmail(e.currentTarget.value)}
                     />
                     <input
                         type="password"
                         placeholder={t("login_password")}
-                        value={password()} 
-                        onInput={(e) => setPassword(e.currentTarget.value)} 
+                        value={password()}
+                        onInput={(e) => setPassword(e.currentTarget.value)}
                     />
                     <button type="submit" class={styles.primaryBtn}>
                         {t("login_submit")}
