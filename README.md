@@ -6,7 +6,7 @@
 *Because your deepest thoughts belong to no one else.*
 
 [![SolidJS](https://img.shields.io/badge/SolidJS-1.9-2c4f7c?style=flat-square&logo=solid)](https://www.solidjs.com/)
-[![PocketBase](https://img.shields.io/badge/PocketBase-0.28-b8db57?style=flat-square&logo=pocketbase&logoColor=black)](https://pocketbase.io/)
+[![PocketBase](https://img.shields.io/badge/PocketBase-0.40.6-b8db57?style=flat-square&logo=pocketbase&logoColor=black)](https://pocketbase.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Web Crypto API](https://img.shields.io/badge/Crypto-AES--GCM%20256-darkgreen?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
