@@ -6,6 +6,8 @@ import type { EntryDetails } from "./Entry";
 import { decryptText, encryptText, vaultKey } from "../lib/crypto";
 import UnlockVault from "../lib/UnlockVault";
 import styles from './Editor.module.scss';
+// 1. Importa marked para el parseo de Markdown
+import { marked } from "marked";
 
 async function fetchEntry(id: string): Promise<EntryDetails> {
     return pb.collection("entries").getOne(id);
@@ -15,6 +17,9 @@ export default function EditEntry() {
     const params = useParams();
     const [body, setBody] = createSignal("");
     const [title, setTitle] = createSignal("");
+    
+    // 2. Estado para controlar la pestaña activa ("edit" o "preview")
+    const [activeTab, setActiveTab] = createSignal<"edit" | "preview">("edit");
 
     const [isErrorOpen, setIsErrorOpen] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
@@ -23,8 +28,6 @@ export default function EditEntry() {
 
     const [entry] = createResource(() => params.id, fetchEntry);
 
-
-    // Watch for successful loads, missing params, and fetch errors
     createEffect(async () => {
         if (!params.id) {
             setErrorMessage("No entry ID provided in the URL.");
@@ -48,7 +51,6 @@ export default function EditEntry() {
         const data = entry();
         if (data) {
             try {
-                // Decrypt the data before setting it to the state
                 const plainTitle = await decryptText(data.title, key);
                 const plainBody = await decryptText(data.body, key);
 
@@ -80,15 +82,12 @@ export default function EditEntry() {
                 return;
             }
 
-            // 1. Get the key
             const key = vaultKey();
             if (!key) return;
 
-            // 2. Encrypt the signals
             const encryptedTitle = await encryptText(title(), key);
             const encryptedBody = await encryptText(body(), key);
 
-            // 3. Save the encrypted data
             await pb.collection("entries").update(params.id, {
                 title: encryptedTitle,
                 body: encryptedBody,
@@ -109,39 +108,68 @@ export default function EditEntry() {
         <Show when={vaultKey()} fallback={<UnlockVault />}>
             <div class={styles.editorContainer}>
                 <form onSubmit={handleSubmit} class={styles.editorForm}>
-                    <h1>Edit your entry</h1>
-                    <input
-                        type="text"
-                        class={styles.titleInput}
-                        placeholder="Entry title"
-                        value={title()}
-                        onInput={(e) => setTitle(e.currentTarget.value)}
-                        disabled={entry.loading || !!entry.error}
-                    />
-                    <textarea
-                        name=""
-                        id=""
-                        placeholder="Speak your mind..."
-                        rows={10}
-                        value={body()}
-                        class={styles.bodyInput}
-                        onInput={(e) => setBody(e.currentTarget.value)}
-                        disabled={entry.loading || !!entry.error}
-                    ></textarea>
-                    <div class={styles.footer}>
+                    {/* Header: Título y Botón de Guardar */}
+                    <div class={styles.header}>
                         <input
-                            type="submit"
-                            value="Guardar"
-                            class={styles.saveBtn}
+                            type="text"
+                            class={styles.titleInput}
+                            placeholder="Entry title"
+                            value={title()}
+                            onInput={(e) => setTitle(e.currentTarget.value)}
                             disabled={entry.loading || !!entry.error}
                         />
+                        <button 
+                            type="submit" 
+                            class={styles.saveBtn} 
+                            disabled={entry.loading || !!entry.error}
+                        >
+                            Guardar
+                        </button>
+                    </div>
+
+                    {/* Contenedor de Pestañas (Tabs) */}
+                    <div class={styles.tabContainer}>
+                        <button 
+                            type="button" 
+                            class={activeTab() === "edit" ? styles.activeTab : styles.tabBtn}
+                            onClick={() => setActiveTab("edit")}
+                        >
+                            Write
+                        </button>
+                        <button 
+                            type="button" 
+                            class={activeTab() === "preview" ? styles.activeTab : styles.tabBtn}
+                            onClick={() => setActiveTab("preview")}
+                        >
+                            Preview
+                        </button>
+                    </div>
+
+                    {/* Área Principal (Editor o Preview) */}
+                    <div class={styles.editorBody}>
+                        <Show when={activeTab() === "edit"}>
+                            <textarea
+                                placeholder="Speak your mind in Markdown..."
+                                value={body()}
+                                class={styles.bodyInput}
+                                onInput={(e) => setBody(e.currentTarget.value)}
+                                disabled={entry.loading || !!entry.error}
+                            />
+                        </Show>
+                        
+                        <Show when={activeTab() === "preview"}>
+                            <div 
+                                class={styles.previewPane} 
+                                innerHTML={marked.parse(body() || "*Nothing to preview yet...*") as string}
+                            />
+                        </Show>
                     </div>
                 </form>
+
                 <Modal
                     isOpen={isErrorOpen()}
                     onClose={() => {
                         setIsErrorOpen(false);
-                        // This now handles both save success and load failure
                         if (shouldRedirect()) {
                             navigate("/");
                         }

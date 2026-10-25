@@ -1,91 +1,144 @@
 /* src/components/Editor.module.scss */
 
 .editorContainer {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 2.5rem;
-    background: var(--surface-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+  max-width: 800px; /* Reduced from 1200px since it's a single column again */
+  margin: 2rem auto;
+  padding: 2.5rem;
+  background: var(--surface-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
 }
 
-.editorForm {
-    display: flex;
-    flex-direction: column;
-}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
 
-.titleInput {
-    width: 100%;
-    font-size: 2.5rem;
+  .titleInput {
+    flex-grow: 1;
+    font-size: 2.25rem;
     font-weight: 700;
     border: none;
-    border-bottom: 2px solid transparent;
-    padding: 0.5rem 0;
-    margin-bottom: 1.5rem;
     background: transparent;
     color: var(--text-main);
-    transition: border-color 0.2s;
-    font-family: inherit;
+    
+    &:focus { outline: none; }
+    &::placeholder { color: #ced4da; }
+  }
 
-    &::placeholder {
-        color: #ced4da;
-    }
+  .saveBtn {
+    background-color: var(--primary-accent);
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
 
-    &:focus {
-        outline: none;
-        border-bottom-color: var(--primary-accent);
+    &:hover:not(:disabled) {
+      background-color: #2563eb;
+      transform: translateY(-1px);
     }
+    &:disabled {
+      background-color: #a5b4fc;
+      cursor: not-allowed;
+    }
+  }
+}
+
+/* Tab Navigation Styles */
+.tabContainer {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 2px solid #f1f3f5;
+  margin-bottom: 1.5rem;
+}
+
+.tabBtn {
+  background: none;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #6c757d;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px; /* Pulls the border down to overlap the container border */
+  transition: all 0.2s;
+
+  &:hover {
+    color: var(--text-main);
+  }
+}
+
+.activeTab {
+  @extend .tabBtn;
+  color: var(--primary-accent);
+  border-bottom: 3px solid var(--primary-accent);
+}
+
+/* Body Area */
+.editorBody {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .bodyInput {
-    width: 100%;
-    min-height: 50vh;
-    border: none;
-    resize: vertical;
-    /* Allows the user to drag the height, but not the width */
-    font-size: 1.15rem;
-    line-height: 1.7;
-    padding: 0.5rem 0;
-    background: transparent;
-    color: var(--text-main);
-    font-family: inherit;
-    margin-bottom: 1.5rem;
+  flex-grow: 1;
+  width: 100%;
+  border: none;
+  resize: vertical;
+  min-height: 60vh;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  background: transparent;
+  color: var(--text-main);
+  font-family: 'Courier New', Courier, monospace;
+  outline: none;
 
-    &::placeholder {
-        color: #ced4da;
-    }
-
-    &:focus {
-        outline: none;
-    }
+  &::placeholder { color: #ced4da; }
 }
 
-.footer {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
+.previewPane {
+  flex-grow: 1;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  min-height: 60vh;
+  
+  /* Markdown Formatting */
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #343a40;
+  
+  p { margin-top: 0; margin-bottom: 1.5rem; }
+  h1, h2, h3 { color: var(--text-main); margin-top: 0; margin-bottom: 1rem; line-height: 1.3;}
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;}
+  
+  blockquote {
+    margin: 1.5rem 0;
+    padding: 1rem 1.5rem;
+    border-left: 4px solid var(--primary-accent);
+    color: #495057;
+    font-style: italic;
+  }
+  
+  code {
+    background-color: #e9ecef;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    color: #e83e8c;
+  }
 
-    .saveBtn {
-        background-color: var(--primary-accent);
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-
-        &:hover {
-            background-color: #2563eb;
-            transform: translateY(-1px);
-        }
-
-        &:disabled {
-            background-color: #a5b4fc;
-            cursor: not-allowed;
-            transform: none;
-        }
-    }
+  pre {
+    background-color: #212529;
+    padding: 1rem;
+    border-radius: 8px;
+    code { background: none; color: #f8f9fa; padding: 0; }
+  }
 }

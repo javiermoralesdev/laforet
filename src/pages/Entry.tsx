@@ -5,6 +5,7 @@ import { decryptText, vaultKey } from "../lib/crypto";
 import UnlockVault from "../lib/UnlockVault";
 import Modal from "../lib/Modal";
 import styles from "./Reader.module.scss";
+import { marked } from "marked";
 
 interface EntryDetails {
     id: string;
@@ -76,9 +77,10 @@ function Entry() {
                                     <h2>{title()}</h2>
                                     <small>{new Date(loadedEntry().created).toLocaleString()}</small>
                                 </header>
-                                <div class={styles.body}>
-                                    {body()}
-                                </div>
+                                <div
+                                    class={styles.body}
+                                    innerHTML={marked.parse(body()) as string}
+                                ></div>
                             </article>
                         )}
                     </Match>
