@@ -1,36 +1,24 @@
 import { createSignal } from "solid-js";
 import { pb, currentUser } from "../lib/pocketbase";
-import { deriveKey, decryptText } from "../lib/crypto";
-import { setVaultKey } from "../lib/crypto";
+import { deriveKey, decryptText, setVaultKey } from "../lib/crypto";
+import { useLocale } from "../i18n";
 import styles from './Auth.module.scss';
 
 export default function UnlockVault() {
+    const { t } = useLocale();
     const [password, setPassword] = createSignal("");
     const [error, setError] = createSignal("");
 
     const handleUnlock = async (e: Event) => {
         e.preventDefault();
         setError("");
-
         try {
-            console.log("Decrypt...");
-            // 1. Derive the hypothetical key from their input
             const tempKey = await deriveKey(password(), currentUser()?.id || "");
-
-            // 2. Fetch their stored canary from PocketBase
             const userRecord = await pb.collection("users").getOne(currentUser()?.id || "");
-
-            // 3. Attempt to decrypt the canary
             await decryptText(userRecord.vaultCheck, tempKey);
-
-            // 4. If the line above didn't throw an error, the password is CORRECT!
-            console.log("Correct");
             setVaultKey(tempKey);
-            // navigate("/") or close the unlock screen here...
-
         } catch (err) {
-            // If decryptText throws, the password was WRONG.
-            setError("Incorrect vault password. Please try again.");
+            setError(t("unlock_error"));
             setVaultKey(null);
         }
     };
@@ -39,15 +27,15 @@ export default function UnlockVault() {
         <div class={styles.authContainer}>
             <div class={styles.authCard}>
                 <form onSubmit={handleUnlock}>
-                    <h2>Unlock your Diary</h2>
+                    <h2>{t("unlock_title")}</h2>
                     <input
                         type="password"
-                        placeholder="Vault Password"
+                        placeholder={t("unlock_password")}
                         value={password()}
                         onInput={(e) => setPassword(e.currentTarget.value)}
                     />
-                    <button class={styles.primaryBtn} type="submit">Unlock</button>
-                    {error() && <p style={{ color: "red" }}>{error()}</p>}
+                    <button class={styles.primaryBtn} type="submit">{t("unlock_submit")}</button>
+                    {error() && <p style={{ color: "red"}}>{error()}</p>}
                 </form>
             </div>
         </div>

@@ -1,81 +1,62 @@
 import { createSignal, Show } from "solid-js";
-import { currentUser, pb } from "./pocketbase";
-import Modal from "./Modal";
+import { currentUser, pb } from "../lib/pocketbase";
+import Modal from "../lib/Modal";
 import { useNavigate } from "@solidjs/router";
-import { deriveKey, setVaultKey } from "./crypto";
-// 1. Import the styles
+import { deriveKey, setVaultKey } from "../lib/crypto";
+import { useLocale } from "../i18n";
 import styles from "./Auth.module.scss";
 
-function LoginForm() {
-    const signupsDisabled = import.meta.env.VITE_DISABLE_SIGNUPS === "true"; //
-    const [email, setEmail] = createSignal(""); //
-    const [password, setPassword] = createSignal(""); //[cite: 15]
+export default function LoginForm() {
+    const { t } = useLocale();
+    const signupsDisabled = import.meta.env.VITE_DISABLE_SIGNUPS === "true"; 
+    const [email, setEmail] = createSignal(""); 
+    const [password, setPassword] = createSignal(""); 
+    const [isErrorOpen, setIsErrorOpen] = createSignal(false); 
+    const [errorMessage, setErrorMessage] = createSignal(""); 
+    const navigate = useNavigate(); 
 
-    const [isErrorOpen, setIsErrorOpen] = createSignal(false); //[cite: 15]
-    const [errorMessage, setErrorMessage] = createSignal(""); //[cite: 15]
-
-    const navigate = useNavigate(); //[cite: 15]
-
-    // 2. Refactor to accept an Event so it can handle the form submission
     const login = async (e: Event) => {
         e.preventDefault();
         try {
-            await pb.collection("users").authWithPassword(email(), password()); //[cite: 15]
-            const key = await deriveKey(password(), currentUser()?.id || ""); //[cite: 15]
-            setVaultKey(key); //[cite: 15]
+            await pb.collection("users").authWithPassword(email(), password()); 
+            const key = await deriveKey(password(), currentUser()?.id || ""); 
+            setVaultKey(key); 
         } catch (error) {
-            setErrorMessage("Error signing in. Incorrect email/password"); //[cite: 15]
-            setIsErrorOpen(true); //[cite: 15]
+            setErrorMessage(t("login_error")); 
+            setIsErrorOpen(true); 
         }
     }
 
     return (
         <div class={styles.authContainer}>
             <div class={styles.authCard}>
-                <h2>Welcome Back</h2>
-
-                {/* 3. Attach the handler to the form, not the button */}
+                <h2>{t("login_title")}</h2>
                 <form onSubmit={login}>
                     <input
                         type="email"
-                        placeholder="Email"
-                        value={email()} //[cite: 15]
-                        onInput={(e) => setEmail(e.currentTarget.value)} //[cite: 15]
+                        placeholder={t("login_email")}
+                        value={email()} 
+                        onInput={(e) => setEmail(e.currentTarget.value)} 
                     />
                     <input
                         type="password"
-                        placeholder="Password"
-                        value={password()} //[cite: 15]
-                        onInput={(e) => setPassword(e.currentTarget.value)} //[cite: 15]
+                        placeholder={t("login_password")}
+                        value={password()} 
+                        onInput={(e) => setPassword(e.currentTarget.value)} 
                     />
-
-                    {/* 4. Use type="submit" so the "Enter" key works */}
                     <button type="submit" class={styles.primaryBtn}>
-                        Login
+                        {t("login_submit")}
                     </button>
-
                     <Show when={!signupsDisabled}>
-                        {/* 5. type="button" prevents this from accidentally triggering the login logic */}
-                        <button
-                            type="button"
-                            class={styles.textBtn}
-                            onClick={() => navigate("/signup")}
-                        >
-                            Don't have an account? Sign Up
+                        <button type="button" class={styles.textBtn} onClick={() => navigate("/signup")}>
+                            {t("login_signup_link")}
                         </button>
                     </Show>
                 </form>
             </div>
-
-            <Modal
-                title="Info" //[cite: 15]
-                isOpen={isErrorOpen()} //[cite: 15]
-                onClose={() => setIsErrorOpen(false)} //[cite: 15]
-            >
+            <Modal title={t("info")} isOpen={isErrorOpen()} onClose={() => setIsErrorOpen(false)}>
                 <p>{errorMessage()}</p>
             </Modal>
         </div>
     );
 }
-
-export default LoginForm; //[cite: 15]
