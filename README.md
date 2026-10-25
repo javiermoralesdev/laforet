@@ -173,9 +173,6 @@ services:
       VITE_DISABLE_SIGNUPS: "false"
     volumes:
       - /path/to/your/data:/pb/pb_data
-
-volumes:
-  laforet_data:
 ```
 
 Launch the stack:
