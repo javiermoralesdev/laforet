@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { currentUser, pb } from "../lib/pocketbase";
 import Modal from "../lib/Modal";
-import { deriveKey, encryptText, setVaultKey } from "../lib/crypto";
+import { deriveKeys, encryptText, setVaultKey } from "../lib/crypto";
 import { useLocale } from "../i18n";
 import styles from "./Auth.module.scss";
 
@@ -35,13 +35,13 @@ export default function SignUpForm() {
         }
 
         try {
-            await pb.collection("users").create({ email: email(), password: password(), passwordConfirm: passwordConfirm(), name: name() });
-            await pb.collection("users").authWithPassword(email(), password());
+            const key = await deriveKeys(password(), email());
+            await pb.collection("users").create({ email: email(), password: key.authSecret, passwordConfirm: key.authSecret, name: name() });
+            await pb.collection("users").authWithPassword(email(), key.authSecret);
 
-            const key = await deriveKey(password(), currentUser()?.id || "");
-            const encryptedCanary = await encryptText("success", key);
+            const encryptedCanary = await encryptText("success", key.encKey);
             await pb.collection("users").update(currentUser()?.id || "", { vaultCheck: encryptedCanary });
-            setVaultKey(key);
+            setVaultKey(key.encKey);
 
             setShouldRedirect(true);
             setModalMessage(t("signup_success"));

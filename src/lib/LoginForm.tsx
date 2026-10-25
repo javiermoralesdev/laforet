@@ -1,8 +1,8 @@
 import { createSignal, Show } from "solid-js";
-import { currentUser, pb } from "../lib/pocketbase";
+import { pb } from "../lib/pocketbase";
 import Modal from "../lib/Modal";
 import { useNavigate } from "@solidjs/router";
-import { deriveKey, setVaultKey } from "../lib/crypto";
+import { deriveKeys, setVaultKey } from "../lib/crypto";
 import { useLocale } from "../i18n";
 import styles from "./Auth.module.scss";
 
@@ -19,9 +19,9 @@ export default function LoginForm() {
     const login = async (e: Event) => {
         e.preventDefault();
         try {
-            await pb.collection("users").authWithPassword(email(), password());
-            const key = await deriveKey(password(), currentUser()?.id || "");
-            setVaultKey(key);
+            const key = await deriveKeys(password(), email());
+            await pb.collection("users").authWithPassword(email(), key.authSecret);
+            setVaultKey(key.encKey);
         } catch (error) {
             setErrorMessage(t("login_error"));
             setIsErrorOpen(true);

@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { pb, currentUser } from "../lib/pocketbase";
-import { deriveKey, decryptText, setVaultKey } from "../lib/crypto";
+import { deriveKeys, decryptText, setVaultKey } from "../lib/crypto";
 import { useLocale } from "../i18n";
 import styles from './Auth.module.scss';
 
@@ -13,10 +13,10 @@ export default function UnlockVault() {
         e.preventDefault();
         setError("");
         try {
-            const tempKey = await deriveKey(password(), currentUser()?.id || "");
+            const tempKey = await deriveKeys(password(), currentUser()?.email|| "");
             const userRecord = await pb.collection("users").getOne(currentUser()?.id || "");
-            await decryptText(userRecord.vaultCheck, tempKey);
-            setVaultKey(tempKey);
+            await decryptText(userRecord.vaultCheck, tempKey.encKey);
+            setVaultKey(tempKey.encKey);
         } catch (err) {
             setError(t("unlock_error"));
             setVaultKey(null);
