@@ -5,6 +5,7 @@ import Modal from "../lib/Modal";
 import type { EntryDetails } from "./Entry";
 import { decryptText, encryptText, vaultKey } from "../lib/crypto";
 import UnlockVault from "../lib/UnlockVault";
+import styles from './Editor.module.scss';
 
 async function fetchEntry(id: string): Promise<EntryDetails> {
     return pb.collection("entries").getOne(id);
@@ -106,12 +107,13 @@ export default function EditEntry() {
 
     return (
         <Show when={vaultKey()} fallback={<UnlockVault />}>
-            <div>
-                <form onSubmit={handleSubmit}>
+            <div class={styles.editorContainer}>
+                <form onSubmit={handleSubmit} class={styles.editorForm}>
                     <h1>Edit your entry</h1>
                     <input
                         type="text"
-                        placeholder="Title"
+                        class={styles.titleInput}
+                        placeholder="Entry title"
                         value={title()}
                         onInput={(e) => setTitle(e.currentTarget.value)}
                         disabled={entry.loading || !!entry.error}
@@ -120,16 +122,20 @@ export default function EditEntry() {
                         name=""
                         id=""
                         placeholder="Speak your mind..."
-                        rows={25}
+                        rows={10}
                         value={body()}
+                        class={styles.bodyInput}
                         onInput={(e) => setBody(e.currentTarget.value)}
                         disabled={entry.loading || !!entry.error}
                     ></textarea>
-                    <input
-                        type="submit"
-                        value="Guardar"
-                        disabled={entry.loading || !!entry.error}
-                    />
+                    <div class={styles.footer}>
+                        <input
+                            type="submit"
+                            value="Guardar"
+                            class={styles.saveBtn}
+                            disabled={entry.loading || !!entry.error}
+                        />
+                    </div>
                 </form>
                 <Modal
                     isOpen={isErrorOpen()}

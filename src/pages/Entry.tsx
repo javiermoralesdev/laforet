@@ -4,6 +4,7 @@ import { createEffect, createResource, createSignal, Match, Show, Switch } from 
 import { decryptText, vaultKey } from "../lib/crypto";
 import UnlockVault from "../lib/UnlockVault";
 import Modal from "../lib/Modal";
+import styles from "./Reader.module.scss";
 
 interface EntryDetails {
     id: string;
@@ -54,7 +55,7 @@ function Entry() {
     });
 
     return (
-        <Show when={vaultKey()} fallback={<UnlockVault/>}>
+        <Show when={vaultKey()} fallback={<UnlockVault />}>
             <div>
                 <Switch>
                     <Match when={entry.loading}>
@@ -70,10 +71,14 @@ function Entry() {
                     {/* This ONLY evaluates if loading is false AND error is false, preventing the crash */}
                     <Match when={entry()}>
                         {(loadedEntry) => (
-                            <article>
-                                <h2>{title()}</h2>
-                                <small>{new Date(loadedEntry().created).toLocaleString()}</small>
-                                <p>{body()}</p>
+                            <article class={styles.readerContainer}>
+                                <header class={styles.header}>
+                                    <h2>{title()}</h2>
+                                    <small>{new Date(loadedEntry().created).toLocaleString()}</small>
+                                </header>
+                                <div class={styles.body}>
+                                    {body()}
+                                </div>
                             </article>
                         )}
                     </Match>

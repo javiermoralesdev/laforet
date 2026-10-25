@@ -4,6 +4,7 @@ import Modal from "../lib/Modal";
 import { useNavigate } from "@solidjs/router";
 import { encryptText, vaultKey } from "../lib/crypto";
 import UnlockVault from "../lib/UnlockVault";
+import styles from "./Editor.module.scss";
 
 
 export default function Write() {
@@ -47,13 +48,19 @@ export default function Write() {
     };
 
     return (
-        <Show when={vaultKey()} fallback={<UnlockVault/>}>
-            <div>
-                <form onSubmit={handleSubmit}>
+        <Show when={vaultKey()} fallback={<UnlockVault />}>
+            <div class={styles.editorContainer}>
+                <form onSubmit={handleSubmit} class={styles.editorForm}>
                     <h1>Create your entry</h1>
-                    <input type="text" placeholder="Title" onInput={(e) => setTitle(e.currentTarget.value)} />
-                    <textarea name="" id="" placeholder="Speak your mind..." rows={25} onInput={(e) => setBody(e.currentTarget.value)}></textarea>
-                    <input type="submit" value="Agregar" />
+                    <input type="text" placeholder="Entry title"
+                        onInput={(e) => setTitle(e.currentTarget.value)} class={styles.titleInput} />
+
+                    <textarea name="" id="" placeholder="Speak your mind..." rows={10} onInput={(e) => setBody(e.currentTarget.value)}
+                        class={styles.bodyInput}></textarea>
+
+                    <div class={styles.footer}>
+                        <input class={styles.saveBtn} type="submit" value="Agregar" />
+                    </div>
                 </form>
                 <Modal
                     isOpen={isErrorOpen()}
