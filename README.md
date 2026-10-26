@@ -176,7 +176,7 @@ version: "3.8"
 
 services:
   laforet:
-    image: javiermorales/laforet:latest   # or pin a version, e.g. 1.0.0
+    image: javiermorales/laforet:latest   # or pin a version, e.g. 2.0.1
     container_name: laforet
     restart: unless-stopped
     ports:
