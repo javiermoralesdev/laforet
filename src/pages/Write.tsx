@@ -33,9 +33,7 @@ export default function Write() {
                 body: await encryptText(body(), key!),
                 author: currentUser()?.id
             });
-            setEntrySaved(true);
-            setErrorMessage(t("editor_success_save"));
-            setIsErrorOpen(true);
+            navigate('/');
         } catch (_) {
             setErrorMessage(t("editor_err_save"));
             setIsErrorOpen(true);
