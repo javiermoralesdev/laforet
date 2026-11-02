@@ -14,7 +14,6 @@ export default function Write() {
     const [body, setBody] = createSignal("");
     const [isErrorOpen, setIsErrorOpen] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
-    const [entrySaved, setEntrySaved] = createSignal(false);
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = createSignal<"edit" | "preview">("edit");
 
@@ -45,9 +44,9 @@ export default function Write() {
             <div class={styles.editorContainer}>
                 <form onSubmit={handleSubmit} class={styles.editorForm}>
                     <div class={styles.header}>
-                        <input 
-                            type="text" class={styles.titleInput} placeholder={t("editor_title_placeholder")} 
-                            value={title()} onInput={(e) => setTitle(e.currentTarget.value)} 
+                        <input
+                            type="text" class={styles.titleInput} placeholder={t("editor_title_placeholder")}
+                            value={title()} onInput={(e) => setTitle(e.currentTarget.value)}
                         />
                         <button type="submit" class={styles.saveBtn}>{t("editor_save")}</button>
                     </div>
@@ -70,7 +69,7 @@ export default function Write() {
                         </Show>
                     </div>
                 </form>
-                <Modal isOpen={isErrorOpen()} title={t("info")} onClose={() => { setIsErrorOpen(false); if (entrySaved()) navigate("/"); }}>
+                <Modal isOpen={isErrorOpen()} title={t("info")} onClose={() => { setIsErrorOpen(false) }}>
                     <p>{errorMessage()}</p>
                 </Modal>
             </div>
