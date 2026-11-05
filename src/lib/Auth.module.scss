@@ -5,7 +5,18 @@
   justify-content: center;
   align-items: center;
   min-height: 85vh;
-  padding: 2rem 1rem;
+  min-height: 85dvh;
+  padding: 2.5rem 1rem;
+  width: 100%;
+
+  @media (max-width: 640px) {
+    min-height: calc(100dvh - 2rem);
+    padding: 1.5rem 0.75rem;
+  }
+
+  @media (max-width: 380px) {
+    padding: 1rem 0.5rem;
+  }
 }
 
 .authCard {
@@ -30,6 +41,7 @@
     background: var(--primary-accent);
     border-radius: 0 0 2px 2px;
     opacity: 0.85;
+    transition: left 0.2s, right 0.2s;
   }
 
   h2 {
@@ -40,15 +52,17 @@
     font-size: 2.1rem;
     font-weight: 500;
     letter-spacing: -0.02em;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 
   /* Warning disclaimer box (e.g. on SignUp) */
-  > div {
-    background: #fbf7ef;
+  > div, form > div {
+    background: #fbf7ef !important;
     border: 1px dashed var(--surface-border-strong) !important;
     border-radius: 6px;
     padding: 1.1rem 1.25rem;
-    margin-bottom: 2rem !important;
+    margin-bottom: 1.75rem !important;
 
     h3 {
       font-family: var(--font-sans);
@@ -58,6 +72,14 @@
       color: var(--danger-accent);
       margin: 0 0 0.4rem 0;
       font-weight: 700;
+    }
+
+    strong {
+      color: var(--danger-accent) !important;
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
     p {
@@ -90,10 +112,11 @@
     border: 1px solid var(--surface-border-strong);
     border-radius: 5px;
     font-family: var(--font-serif);
-    font-size: 1.05rem;
+    font-size: 1rem;
     color: var(--text-main);
     box-sizing: border-box;
     transition: all 0.2s ease;
+    min-height: 44px;
 
     &::placeholder {
       color: var(--text-faint);
@@ -111,7 +134,7 @@
 
   .primaryBtn {
     padding: 0.85rem 1.5rem;
-    margin-top: 0.75rem;
+    margin-top: 0.5rem;
     border-radius: 5px;
     border: 1px solid var(--primary-accent);
     background-color: var(--primary-accent);
@@ -123,6 +146,11 @@
     text-transform: uppercase;
     box-shadow: 0 2px 5px rgba(44, 78, 59, 0.25);
     transition: all 0.2s ease;
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
 
     &:hover {
       background-color: var(--primary-accent-hover);
@@ -138,16 +166,19 @@
   }
 
   .textBtn {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
     background: none;
     border: none;
     color: var(--text-muted);
     font-family: var(--font-serif);
     font-style: italic;
     font-size: 0.95rem;
-    padding: 0.5rem;
+    padding: 0.75rem 0.5rem;
+    min-height: 44px;
     text-align: center;
     transition: color 0.2s ease;
 
@@ -155,6 +186,42 @@
       color: var(--primary-accent);
       text-decoration: underline;
       text-underline-offset: 3px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    padding: 2.25rem 1.5rem;
+
+    &::before {
+      left: 1.5rem;
+      right: 1.5rem;
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    form {
+      gap: 1.15rem;
+    }
+
+    input {
+      padding: 0.75rem 0.95rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+    padding: 1.75rem 1.15rem;
+
+    &::before {
+      left: 1.15rem;
+      right: 1.15rem;
+    }
+
+    h2 {
+      font-size: 1.55rem;
+      margin-bottom: 1.25rem;
     }
   }
 }

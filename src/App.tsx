@@ -1,16 +1,32 @@
-import { Route, Router } from "@solidjs/router"
-import Home from "./pages/Home"
-import NotFound from "./pages/NotFround"
-import Write from "./pages/Write"
+import { Route, Router, type RouteSectionProps } from "@solidjs/router"
+import { lazy } from "solid-js"
 import './App.scss'
-import Entry from "./pages/Entry"
-import EditEntry from "./pages/EditEntry"
-import SignUpForm from "./lib/SignUpForm"
+
+const Home = lazy(() => import("./pages/Home"))
+const SignUpForm = lazy(() => import("./lib/SignUpForm"))
+const Entry = lazy(() => import("./pages/Entry"))
+const EditEntry = lazy(() => import("./pages/EditEntry"))
+const Write = lazy(() => import("./pages/Write"))
+const NotFound = lazy(() => import("./pages/NotFround"))
+
+function RootLayout(props: RouteSectionProps) {
+  return (
+    <div class="appLayout">
+      <main class="appMain">{props.children}</main>
+      <footer class="appFooter">
+        <p>
+          <span class="appName">Laforet</span>
+          <span class="appDivider">·</span>
+          <span class="appVersion">v{__APP_VERSION__}</span>
+        </p>
+      </footer>
+    </div>
+  )
+}
 
 function App() {
-
   return (
-    <Router>
+    <Router root={RootLayout}>
       <Route path="/" component={Home} />
       <Route path="/signup" component={SignUpForm} />
       <Route path="/entry/:id" component={Entry} />

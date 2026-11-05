@@ -2,6 +2,9 @@
 import { render } from 'solid-js/web'
 import App from './App.tsx'
 import { I18nProvider } from './i18n/index.tsx'
+import { registerSW } from 'virtual:pwa-register'
+
+registerSW({ immediate: true })
 
 const root = document.getElementById('root')
 

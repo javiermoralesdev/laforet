@@ -77,6 +77,7 @@ export default function EditEntry() {
     return (
         <Show when={vaultKey()} fallback={<UnlockVault />}>
             <div class={styles.editorContainer}>
+                <a href="/" class={styles.backLink}>← {t("list_title")}</a>
                 <form onSubmit={handleSubmit} class={styles.editorForm}>
                     <div class={styles.header}>
                         <input 
