@@ -60,6 +60,7 @@ export default function Entry() {
                     <Match when={entry()}>
                         {(loadedEntry) => (
                             <article class={styles.readerContainer}>
+                                <a href="/" class={styles.backLink}>← {t("list_title")}</a>
                                 <header class={styles.header}>
                                     <h2>{title()}</h2>
                                     <small>{new Date(loadedEntry().created).toLocaleString()}</small>

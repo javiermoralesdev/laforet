@@ -88,6 +88,9 @@ export default function SignUpForm() {
                     </div>
 
                     <input class={styles.primaryBtn} type="submit" value={t("signup_submit")} />
+                    <button type="button" class={styles.textBtn} onClick={() => navigate("/")}>
+                        ← {t("login_title")}
+                    </button>
                 </form>
                 <Modal isOpen={isModalOpen()} title={t("info")} onClose={() => { setIsModalOpen(false); if (shouldRedirect()) navigate("/"); }}>
                     <p>{modalMessage()}</p>
