@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Install dependencies first (caches this layer)
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN bun ci
 
 # Copy the rest of the code
 COPY . .
@@ -21,7 +21,7 @@ RUN bun run build
 FROM alpine:latest
 
 # You can update this to the latest PocketBase version
-ARG PB_VERSION=0.40.6
+ARG PB_VERSION=0.41.1
 # Set automatically by buildx (amd64, arm64...), matches PocketBase's release names
 ARG TARGETARCH
 
@@ -29,7 +29,7 @@ ARG TARGETARCH
 RUN apk add --no-cache unzip ca-certificates curl
 
 # Download and unzip PocketBase (-f makes curl fail on HTTP errors instead of saving the 404 page)
-RUN curl -fL "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_${TARGETARCH:-amd64}.zip" -o /tmp/pb.zip \
+RUN curl -fL "https://ganigeorgiev.com/meta/pocketbase/pocketbase/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_${TARGETARCH:-amd64}.zip" -o /tmp/pb.zip \
     && unzip /tmp/pb.zip -d /pb \
     && rm /tmp/pb.zip \
     && chmod +x /pb/pocketbase
