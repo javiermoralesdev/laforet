@@ -7,6 +7,10 @@ interface ModalProps {
     onClose: () => void;
     title: string;
     children: JSX.Element;
+    onConfirm?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+    danger?: boolean;
 }
 
 const Modal: Component<ModalProps> = (props) => {
@@ -21,7 +25,27 @@ const Modal: Component<ModalProps> = (props) => {
                             {props.children}
                         </div>
 
-                        <button onClick={props.onClose}>OK</button>
+                        <Show 
+                            when={props.onConfirm} 
+                            fallback={
+                                <div class="modal-actions">
+                                    <button type="button" onClick={props.onClose}>OK</button>
+                                </div>
+                            }
+                        >
+                            <div class="modal-actions">
+                                <button type="button" class="modal-cancel-btn" onClick={props.onClose}>
+                                    {props.cancelText || "Cancel"}
+                                </button>
+                                <button 
+                                    type="button" 
+                                    class={props.danger ? "modal-danger-btn" : "modal-confirm-btn"} 
+                                    onClick={props.onConfirm}
+                                >
+                                    {props.confirmText || "OK"}
+                                </button>
+                            </div>
+                        </Show>
                     </div>
                 </div>
             </Portal>

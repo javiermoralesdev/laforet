@@ -42,12 +42,25 @@ export default function ListEntry() {
 
     const [modalMessage, setModalMessage] = createSignal("");
     const [isErrorOpen, setErrorOpen] = createSignal(false);
+    const [entryToDelete, setEntryToDelete] = createSignal<EntrySummary | null>(null);
 
-    async function removeEntry(entryID: string) {
-        await pb.collection("entries").delete(entryID);
-        refetch();
-        setModalMessage(t("list_del_success"));
-        setErrorOpen(true);
+    function promptDelete(entry: EntrySummary) {
+        setEntryToDelete(entry);
+    }
+
+    async function confirmDelete() {
+        const target = entryToDelete();
+        if (!target) return;
+        setEntryToDelete(null);
+        try {
+            await pb.collection("entries").delete(target.id);
+            refetch();
+            setModalMessage(t("list_del_success"));
+            setErrorOpen(true);
+        } catch (err) {
+            setModalMessage(t("error") + " " + (err instanceof Error ? err.message : String(err)));
+            setErrorOpen(true);
+        }
     }
 
     return (
@@ -89,7 +102,7 @@ export default function ListEntry() {
                                     <button onClick={() => navigate("/edit/" + entry.id)}>
                                         {t("list_edit")}
                                     </button>
-                                    <button class={styles.deleteBtn} onClick={() => removeEntry(entry.id)}>
+                                    <button class={styles.deleteBtn} onClick={() => promptDelete(entry)}>
                                         {t("list_remove")}
                                     </button>
                                 </div>
@@ -97,7 +110,26 @@ export default function ListEntry() {
                         )}
                     </For>
                 </ul>
+
+                {/* Delete Confirmation Modal */}
+                <Modal 
+                    isOpen={!!entryToDelete()} 
+                    title={t("list_del_confirm_title")} 
+                    onClose={() => setEntryToDelete(null)}
+                    onConfirm={confirmDelete}
+                    confirmText={t("list_remove")}
+                    cancelText={t("modal_cancel")}
+                    danger={true}
+                >
+                    <p>{t("list_del_confirm_msg")}</p>
+                    <Show when={entryToDelete()?.title}>
+                        <p style={{ "font-style": "italic", "color": "var(--text-muted)", "margin-top": "0.5rem" }}>
+                            «{entryToDelete()!.title}»
+                        </p>
+                    </Show>
+                </Modal>
                 
+                {/* Info / Feedback Modal */}
                 <Modal isOpen={isErrorOpen()} title={t("info")} onClose={() => setErrorOpen(false)}>
                     <p>{modalMessage()}</p>
                 </Modal>

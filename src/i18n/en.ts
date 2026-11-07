@@ -2,6 +2,8 @@ export const en = {
     // General
     info: "Info",
     error: "Error:",
+    modal_cancel: "Cancel",
+    modal_confirm: "Confirm",
     
     // Dashboard (ListEntries)
     list_title: "My Diary Entries",
@@ -12,6 +14,8 @@ export const en = {
     list_empty: "No entries yet. Start writing!",
     list_edit: "Edit",
     list_remove: "Remove",
+    list_del_confirm_title: "Delete Entry",
+    list_del_confirm_msg: "Are you sure you want to permanently delete this entry? This action cannot be undone.",
     list_del_success: "Entry successfully deleted",
     list_decryption_error: "🔒 [Decryption Error]",
 
