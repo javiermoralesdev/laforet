@@ -101,6 +101,48 @@
     }
   }
 
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+
+    .modal-cancel-btn {
+      background-color: var(--surface-alt);
+      color: var(--text-body);
+      border: 1px solid var(--surface-border-strong);
+      box-shadow: 0 1px 3px rgba(35, 31, 28, 0.04);
+
+      &:hover {
+        background-color: #ede6d8;
+        border-color: #beb29d;
+        color: var(--text-main);
+        box-shadow: 0 2px 5px rgba(35, 31, 28, 0.08);
+      }
+    }
+
+    .modal-danger-btn {
+      background-color: var(--danger-accent);
+      border-color: var(--danger-accent);
+      color: #fffefb;
+      box-shadow: 0 2px 6px rgba(142, 57, 49, 0.25);
+
+      &:hover {
+        background-color: var(--danger-accent-hover);
+        border-color: var(--danger-accent-hover);
+        box-shadow: 0 4px 12px rgba(142, 57, 49, 0.35);
+      }
+    }
+
+    .modal-confirm-btn {
+      background-color: var(--primary-accent);
+      border-color: var(--primary-accent);
+      color: #fcfaf6;
+    }
+  }
+
   @media (max-width: 480px) {
     padding: 1.75rem 1.25rem;
 
@@ -122,6 +164,17 @@
     button {
       width: 100%;
       min-height: 44px;
+    }
+
+    .modal-actions {
+      flex-direction: column-reverse;
+      gap: 0.6rem;
+      width: 100%;
+
+      button {
+        width: 100%;
+        min-height: 44px;
+      }
     }
   }
 }

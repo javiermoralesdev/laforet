@@ -34,9 +34,10 @@ test('Complete Diary Flow: Login, Unlock, Write, and Delete', async ({ page }) =
     // We scope the click to the specific list item containing our test title
     const entryCard = page.locator('li').filter({ hasText: uniqueTitle });
 
-    // Playwright intercepts the window.confirm() dialog you added in EntryView/ListEntries
-    page.on('dialog', dialog => dialog.accept());
     await entryCard.getByRole('button', { name: 'Remove' }).click();
+
+    // Confirm deletion in the confirmation Modal
+    await modal.getByRole('button', { name: 'Remove' }).click();
 
     // 7. Handle the Delete Success Modal
     await expect(modal).toContainText('Entry successfully deleted');

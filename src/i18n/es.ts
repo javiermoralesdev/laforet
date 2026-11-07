@@ -2,6 +2,8 @@ export const es = {
     // General
     info: "Información",
     error: "Error:",
+    modal_cancel: "Cancelar",
+    modal_confirm: "Confirmar",
 
     // Dashboard (ListEntries)
     list_title: "Mis Entradas de Diario",
@@ -12,6 +14,8 @@ export const es = {
     list_empty: "No hay entradas aún. ¡Empieza a escribir!",
     list_edit: "Editar",
     list_remove: "Eliminar",
+    list_del_confirm_title: "Eliminar Entrada",
+    list_del_confirm_msg: "¿Estás seguro de que deseas eliminar permanentemente esta entrada? Esta acción no se puede deshacer.",
     list_del_success: "Entrada eliminada con éxito",
     list_decryption_error: "🔒 [Error al desencriptar]",
 
