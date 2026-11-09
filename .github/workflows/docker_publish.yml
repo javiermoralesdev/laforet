@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up QEMU (for arm64 builds)
         uses: docker/setup-qemu-action@v3
@@ -43,3 +43,56 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+  tarball:
+    # pkgver in a PKGBUILD can't contain hyphens, so skip prereleases like v1.0.0-rc1
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write   # needed to attach files to the release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Build frontend
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      # Release tag v0.9.3 -> laforet-0.9.3-linux-{x86_64,aarch64}.tar.gz
+      - name: Build tarballs
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p release
+
+          for pair in x86_64:amd64 aarch64:arm64; do
+            ARCH="${pair%%:*}"
+            GOARCH="${pair##*:}"
+            NAME="laforet-${VERSION}-linux-${ARCH}"
+            DIR="release/${NAME}"
+            mkdir -p "$DIR"
+
+            CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH" \
+              go build -trimpath -ldflags "-s -w" -o "$DIR/laforet" .
+
+            cp -r pb_migrations pb_hooks "$DIR/"
+            cp -r dist "$DIR/pb_public"
+            cp LICENSE* "$DIR/" 2>/dev/null || true
+
+            tar --sort=name --owner=0 --group=0 --numeric-owner \
+                -C release -cf - "$NAME" | gzip -n > "release/${NAME}.tar.gz"
+            (cd release && sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256")
+          done
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" release/*.tar.gz release/*.sha256 --clobber

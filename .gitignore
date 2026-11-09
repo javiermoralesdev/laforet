@@ -13,6 +13,7 @@ pb_public
 dist-ssr
 *.local
 .env
+pocketbase
 
 playwright-report/
 test-results/
