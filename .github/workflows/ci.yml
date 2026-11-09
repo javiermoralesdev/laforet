@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      # Compile first so a Go error fails fast, and so the tests
+      # reuse this binary instead of building inside the hook
+      - name: Build PocketBase
+        run: CGO_ENABLED=0 go build -o pocketbase .
+
+      - name: Run tests
+        run: bun run vitest run
+
+      - name: Build frontend
+        run: bun run build
+
+  docker-build:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build only, no push: just checks the Dockerfile still compiles
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

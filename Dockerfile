@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Build the SolidJS Frontend
 # ==========================================
-FROM oven/bun:1-alpine AS builder
+FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
@@ -16,23 +16,36 @@ COPY . .
 RUN bun run build
 
 # ==========================================
-# Stage 2: Setup PocketBase & Serve
+# Stage 2: Compile PocketBase from source
+# ==========================================
+# Runs on the build machine and cross-compiles (pure Go, no CGO),
+# so multi-arch builds don't need slow QEMU emulation
+FROM --platform=$BUILDPLATFORM golang:1-alpine AS pb-builder
+
+# Set automatically by buildx
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /src
+
+# Download modules first (caches this layer until go.mod/go.sum change)
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY main.go ./
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} \
+    go build -trimpath -ldflags "-s -w" -o /out/pocketbase .
+
+# ==========================================
+# Stage 3: Setup PocketBase & Serve
 # ==========================================
 FROM alpine:latest
 
-# You can update this to the latest PocketBase version
-ARG PB_VERSION=0.41.1
-# Set automatically by buildx (amd64, arm64...), matches PocketBase's release names
-ARG TARGETARCH
-
 # Install required tools
-RUN apk add --no-cache unzip ca-certificates curl
+RUN apk add --no-cache ca-certificates
 
-# Download and unzip PocketBase (-f makes curl fail on HTTP errors instead of saving the 404 page)
-RUN curl -fL "https://ganigeorgiev.com/meta/pocketbase/pocketbase/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_${TARGETARCH:-amd64}.zip" -o /tmp/pb.zip \
-    && unzip /tmp/pb.zip -d /pb \
-    && rm /tmp/pb.zip \
-    && chmod +x /pb/pocketbase
+# Compiled PocketBase binary
+COPY --from=pb-builder /out/pocketbase /pb/pocketbase
 
 # Ship the schema so a fresh pb_data gets its collections automatically.
 # (Remove these lines if you don't have the folders.)

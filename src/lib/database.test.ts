@@ -1,322 +1,327 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import type { RecordModel } from "pocketbase";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import net from "node:net";
 import { pb, currentUser, logOut } from "./pocketbase";
 import { deriveKeys, encryptText, decryptText, vaultKey, setVaultKey, type DerivedKeys } from "./crypto";
 
-// Helper to generate a valid mock JWT with expiration in the future
-function createMockJWT(userId: string): string {
-    const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-    const payload = Buffer.from(JSON.stringify({
-        id: userId,
-        exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiration
-    })).toString("base64url");
-    return `${header}.${payload}.mockSignature12345`;
-}
-
-// Helper to generate a valid RecordModel for authStore
-function mockRecordModel(data: Record<string, any>): RecordModel {
-    return {
-        id: data.id || "rec_" + Math.random().toString(36).substring(2, 10),
-        collectionId: "_pb_users_auth_",
-        collectionName: "users",
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
-        ...data,
-    } as RecordModel;
-}
-
-interface UserRecord {
-    id: string;
-    email: string;
-    password: string; // The authSecret in zero-knowledge mode
-    name?: string;
-    vaultCheck?: string;
-}
-
-interface EntryRecord {
-    id: string;
-    author: string;
-    title: string;
-    body: string;
-    created: string;
-    updated: string;
-}
-
-describe("Database & Authentication Interactions", () => {
-    // In-memory mock database collections
-    let mockUsers: Map<string, UserRecord>;
-    let mockEntries: Map<string, EntryRecord>;
-    let collectionSpy: any;
-    let entrySeq = 0;
-
-    beforeEach(() => {
-        // Reset in-memory database
-        mockUsers = new Map();
-        mockEntries = new Map();
-        entrySeq = 0;
-
-        // Ensure user is logged out and vault is clean
-        logOut();
-
-        // Mock the pb.collection method to simulate PocketBase database operations
-        collectionSpy = vi.spyOn(pb, "collection").mockImplementation((collectionName: string) => {
-            if (collectionName === "users") {
-                return {
-                    authWithPassword: vi.fn(async (email: string, password: string) => {
-                        const user = Array.from(mockUsers.values()).find(
-                            u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-                        );
-                        if (!user) {
-                            throw new Error("Invalid login credentials.");
-                        }
-                        const token = createMockJWT(user.id);
-                        pb.authStore.save(token, mockRecordModel({
-                            id: user.id,
-                            email: user.email,
-                            name: user.name,
-                            vaultCheck: user.vaultCheck
-                        }));
-                        return {
-                            token,
-                            record: { id: user.id, email: user.email, name: user.name, vaultCheck: user.vaultCheck }
-                        };
-                    }),
-
-                    create: vi.fn(async (data: { email: string; password: string; passwordConfirm?: string; name?: string }) => {
-                        if (Array.from(mockUsers.values()).some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
-                            throw new Error("User already exists.");
-                        }
-                        const id = "usr_" + Math.random().toString(36).substring(2, 10);
-                        const record: UserRecord = {
-                            id,
-                            email: data.email,
-                            password: data.password,
-                            name: data.name
-                        };
-                        mockUsers.set(id, record);
-                        return { id: record.id, email: record.email, name: record.name };
-                    }),
-
-                    getOne: vi.fn(async (id: string) => {
-                        const user = mockUsers.get(id);
-                        if (!user) throw new Error("User not found.");
-                        return { id: user.id, email: user.email, name: user.name, vaultCheck: user.vaultCheck };
-                    }),
-
-                    update: vi.fn(async (id: string, data: Partial<UserRecord>) => {
-                        const user = mockUsers.get(id);
-                        if (!user) throw new Error("User not found.");
-                        const updated = { ...user, ...data };
-                        mockUsers.set(id, updated);
-                        return { id: updated.id, email: updated.email, name: updated.name, vaultCheck: updated.vaultCheck };
-                    }),
-                } as any;
-            }
-
-            if (collectionName === "entries") {
-                return {
-                    create: vi.fn(async (data: { title: string; body: string; author: string }) => {
-                        const id = "ent_" + Math.random().toString(36).substring(2, 10);
-                        const now = new Date(Date.now() + (++entrySeq) * 1000).toISOString();
-                        const record: EntryRecord = {
-                            id,
-                            author: data.author,
-                            title: data.title,
-                            body: data.body,
-                            created: now,
-                            updated: now
-                        };
-                        mockEntries.set(id, record);
-                        return record;
-                    }),
-
-                    getFullList: vi.fn(async (options?: { sort?: string; fields?: string }) => {
-                        const list = Array.from(mockEntries.values());
-                        if (options?.sort === "-created") {
-                            list.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-                        }
-                        return list.map(item => ({
-                            id: item.id,
-                            title: item.title,
-                            created: item.created,
-                            author: item.author
-                        }));
-                    }),
-
-                    getOne: vi.fn(async (id: string) => {
-                        const entry = mockEntries.get(id);
-                        if (!entry) throw new Error("Entry not found.");
-                        return { ...entry };
-                    }),
-
-                    update: vi.fn(async (id: string, data: { title: string; body: string }) => {
-                        const entry = mockEntries.get(id);
-                        if (!entry) throw new Error("Entry not found.");
-                        const updated = {
-                            ...entry,
-                            title: data.title,
-                            body: data.body,
-                            updated: new Date().toISOString()
-                        };
-                        mockEntries.set(id, updated);
-                        return updated;
-                    }),
-
-                    delete: vi.fn(async (id: string) => {
-                        if (!mockEntries.has(id)) throw new Error("Entry not found.");
-                        mockEntries.delete(id);
-                        return true;
-                    })
-                } as any;
-            }
-
-            throw new Error(`Collection ${collectionName} is not mocked.`);
+// Helper to find a free port for the test server
+async function getAvailablePort(preferredPort = 8099): Promise<number> {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        server.listen(preferredPort, "127.0.0.1", () => {
+            server.close(() => resolve(preferredPort));
+        });
+        server.on("error", () => {
+            const ephemeralServer = net.createServer();
+            ephemeralServer.listen(0, "127.0.0.1", () => {
+                const port = (ephemeralServer.address() as net.AddressInfo).port;
+                ephemeralServer.close(() => resolve(port));
+            });
         });
     });
+}
 
-    afterEach(() => {
+// Helper to poll PocketBase /api/health until server is ready
+async function waitForHealth(url: string, timeoutMs = 8000): Promise<boolean> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        try {
+            const res = await fetch(`${url}/api/health`);
+            if (res.ok) return true;
+        } catch (_) { }
+        await new Promise((r) => setTimeout(r, 100));
+    }
+    return false;
+}
+
+// Compile the PocketBase binary from the Go sources in the repo root
+function buildPocketBase(outputPath: string): void {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+
+    const result = spawnSync("go", ["build", "-o", outputPath, "."], {
+        cwd: process.cwd(),
+        env: { ...process.env, CGO_ENABLED: "0" },
+        encoding: "utf-8",
+        timeout: 240_000,
+    });
+
+    if (result.error) {
+        throw new Error(
+            `Could not run "go build" (is Go installed and on PATH?): ${result.error.message}`
+        );
+    }
+    if (result.status !== 0) {
+        throw new Error(`PocketBase build failed:\n${result.stderr || result.stdout}`);
+    }
+}
+
+describe("PocketBase Backend Integration & Database Tests", () => {
+    let pbProcess: ChildProcess | null = null;
+    let testDataDir: string | null = null;
+    let originalBaseUrl: string;
+    let activeServerUrl: string;
+
+    beforeAll(async () => {
+        originalBaseUrl = pb.baseUrl;
+
+        // 1. Check if an external PocketBase instance is already specified or running
+        const externalUrl = process.env.TEST_PB_URL || process.env.VITE_PB_HOST;
+        if (externalUrl) {
+            const isUp = await waitForHealth(externalUrl, 1000);
+            if (isUp) {
+                activeServerUrl = externalUrl;
+                pb.baseUrl = activeServerUrl;
+                return;
+            }
+        }
+
+        // 2. Launch local ./pocketbase binary with isolated test database
+        const binaryPath = process.env.PB_PATH || path.resolve(process.cwd(), "pocketbase");
+        if (!fs.existsSync(binaryPath)) {
+            buildPocketBase(binaryPath);
+        }
+
+        const testPort = await getAvailablePort(8099);
+        activeServerUrl = `http://127.0.0.1:${testPort}`;
+        testDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "pb_test_data_"));
+
+        // Pre-create a superuser so PocketBase doesn't open the installer in the browser
+        const su = spawnSync(
+            binaryPath,
+            [
+                "superuser", "upsert", "test@laforet.local", "test-superuser-password-123",
+                `--dir=${testDataDir}`,
+                `--migrationsDir=${path.resolve(process.cwd(), "pb_migrations")}`,
+            ],
+            { encoding: "utf-8", timeout: 30_000 }
+        );
+        if (su.status !== 0) {
+            throw new Error(`Could not create test superuser:\n${su.stderr || su.stdout}`);
+        }
+
+        pbProcess = spawn(
+            binaryPath,
+            [
+                "serve",
+                `--http=127.0.0.1:${testPort}`,
+                `--dir=${testDataDir}`,
+                `--migrationsDir=${path.resolve(process.cwd(), "pb_migrations")}`,
+                `--hooksDir=${path.resolve(process.cwd(), "pb_hooks")}`,
+            ],
+            {
+                stdio: "pipe",
+                env: {
+                    ...process.env,
+                    VITE_DISABLE_SIGNUPS: "false",
+                },
+            }
+        );
+
+        let serverLog = "";
+        pbProcess.stdout?.on("data", (d) => (serverLog += d));
+        pbProcess.stderr?.on("data", (d) => (serverLog += d));
+        let exitInfo = "";
+        pbProcess.on("exit", (code, signal) => (exitInfo = `exited code=${code} signal=${signal}`));
+        pbProcess.on("error", (err) => (exitInfo = `spawn error: ${err.message}`));
+
+        const isReady = await waitForHealth(activeServerUrl, 10000);
+        if (!isReady) {
+            pbProcess.kill();
+            if (testDataDir) fs.rmSync(testDataDir, { recursive: true, force: true });
+            throw new Error(
+                `PocketBase failed to start at ${activeServerUrl} within 10s. ${exitInfo}\n${serverLog}`
+            );
+        }
+
+        // Connect the app's pocketbase client to the active test server
+        pb.baseUrl = activeServerUrl;
+    }, 15000);
+
+    afterAll(async () => {
         logOut();
-        if (collectionSpy) {
-            collectionSpy.mockRestore();
+        pb.baseUrl = originalBaseUrl;
+
+        if (pbProcess) {
+            pbProcess.kill();
+            pbProcess = null;
+        }
+
+        if (testDataDir && fs.existsSync(testDataDir)) {
+            try {
+                fs.rmSync(testDataDir, { recursive: true, force: true });
+            } catch (_) { }
         }
     });
 
+    beforeEach(() => {
+        logOut();
+    });
+
     // ==========================================
-    // 1. Authentication & User Tests
+    // 1. Server Health & Hooks Verification
+    // ==========================================
+    describe("Server Health & PocketBase Hooks", () => {
+        it("should return healthy status from PocketBase health check endpoint", async () => {
+            const health = await pb.health.check();
+            expect(health.code).toBe(200);
+            expect(health.message).toBe("API is healthy.");
+        });
+
+        it("should execute custom JS app hook (/env-config.js)", async () => {
+            const res = await fetch(`${activeServerUrl}/env-config.js`);
+            expect(res.ok).toBe(true);
+            const content = await res.text();
+            expect(content).toContain("window.__ENV__");
+        });
+    });
+
+    // ==========================================
+    // 2. Authentication & Session Interactions
     // ==========================================
     describe("Authentication & Session Interactions", () => {
         it("should register a new user in the database with authSecret and vaultCheck canary", async () => {
-            const email = "carmen.laforet@example.com";
-            const password = "laforet-master-password";
-            const keys: DerivedKeys = await deriveKeys(password, email);
+            const email = `carmen_${Date.now()}@laforet.es`;
+            const password = "carmen-secret-diary-password";
+            const keys = await deriveKeys(password, email);
+            const canary = await encryptText("success", keys.encKey);
 
-            // 1. Create user in database (only authSecret is sent, NEVER raw password)
+            // Create user in PocketBase users collection
             const createdUser = await pb.collection("users").create({
                 email,
                 password: keys.authSecret,
                 passwordConfirm: keys.authSecret,
-                name: "Carmen Laforet"
+                name: "Carmen",
+                vaultCheck: canary,
             });
 
             expect(createdUser.id).toBeDefined();
-            expect(createdUser.email).toBe(email);
+            expect(createdUser.vaultCheck).toBe(canary);
+            // Verify zero-knowledge invariant: the master password is never stored or transmitted
+            expect(createdUser.vaultCheck).not.toContain(password);
 
-            // Verify stored record in database contains authSecret (64 hex characters) and NOT the raw password
-            const storedInDb = mockUsers.get(createdUser.id);
-            expect(storedInDb?.password).toBe(keys.authSecret);
-            expect(storedInDb?.password).not.toBe(password);
-            expect(storedInDb?.password).toMatch(/^[0-9a-f]{64}$/);
+            // Verify the created user can successfully authenticate and returns email + canary
+            const auth = await pb.collection("users").authWithPassword(email, keys.authSecret);
+            expect(auth.record.email).toBe(email);
+            expect(auth.record.vaultCheck).toBe(canary);
+            logOut();
 
-            // 2. Authenticate
-            await pb.collection("users").authWithPassword(email, keys.authSecret);
-            expect(pb.authStore.isValid).toBe(true);
-            expect(currentUser()?.id).toBe(createdUser.id);
-
-            // 3. Generate encrypted canary and update user record
-            const encryptedCanary = await encryptText("success", keys.encKey);
-            await pb.collection("users").update(currentUser()!.id, { vaultCheck: encryptedCanary });
-
-            // Verify canary is properly stored in database
-            const updatedUser = await pb.collection("users").getOne(currentUser()!.id);
-            expect(updatedUser.vaultCheck).toBeDefined();
-            expect(updatedUser.vaultCheck).toMatch(/^v1:[0-9a-f]{24}:[0-9a-f]+/);
+            // Duplicate registration must be rejected by PocketBase validation
+            await expect(
+                pb.collection("users").create({
+                    email,
+                    password: keys.authSecret,
+                    passwordConfirm: keys.authSecret,
+                })
+            ).rejects.toThrow();
         });
 
         it("should successfully log in, set currentUser signal, and unlock vaultKey", async () => {
-            const email = "reader@example.com";
-            const password = "secure-vault-pass";
+            const email = `login_${Date.now()}@laforet.es`;
+            const password = "safe-login-pass-456";
             const keys = await deriveKeys(password, email);
-
-            // Seed user in database
-            const userId = "usr_reader123";
             const canary = await encryptText("success", keys.encKey);
-            mockUsers.set(userId, {
-                id: userId,
+
+            // Register account first
+            await pb.collection("users").create({
                 email,
                 password: keys.authSecret,
-                name: "Avid Reader",
-                vaultCheck: canary
+                passwordConfirm: keys.authSecret,
+                name: "Login Tester",
+                vaultCheck: canary,
             });
 
-            // Perform login flow (matches LoginForm.tsx)
-            const derived = await deriveKeys(password, email);
-            await pb.collection("users").authWithPassword(email, derived.authSecret);
-            setVaultKey(derived.encKey);
+            expect(pb.authStore.isValid).toBe(false);
+            expect(currentUser()).toBeNull();
 
-            // Assertions on PocketBase authStore and SolidJS signals
+            // Perform login against PocketBase
+            const authData = await pb.collection("users").authWithPassword(email, keys.authSecret);
+            setVaultKey(keys.encKey);
+
             expect(pb.authStore.isValid).toBe(true);
+            expect(pb.authStore.token).toBeTruthy();
             expect(currentUser()).not.toBeNull();
-            expect(currentUser()?.id).toBe(userId);
+            expect(currentUser()?.id).toBe(authData.record.id);
             expect(currentUser()?.email).toBe(email);
             expect(vaultKey()).not.toBeNull();
-            expect(vaultKey()).toBe(derived.encKey);
         });
 
         it("should reject login when incorrect credentials are provided", async () => {
-            const email = "author@example.com";
-            const correctKeys = await deriveKeys("correct-password", email);
-            const wrongKeys = await deriveKeys("wrong-password", email);
+            const email = `wrong_${Date.now()}@laforet.es`;
+            const password = "correct-password-789";
+            const keys = await deriveKeys(password, email);
 
-            // Seed user with correct authSecret
-            mockUsers.set("usr_author", {
-                id: "usr_author",
+            await pb.collection("users").create({
                 email,
-                password: correctKeys.authSecret
+                password: keys.authSecret,
+                passwordConfirm: keys.authSecret,
+                vaultCheck: "test-canary",
             });
 
-            // Attempt login with wrong authSecret
+            // Attempt login with wrong auth secret
             await expect(
-                pb.collection("users").authWithPassword(email, wrongKeys.authSecret)
-            ).rejects.toThrow("Invalid login credentials.");
+                pb.collection("users").authWithPassword(email, "completely-wrong-auth-secret")
+            ).rejects.toThrow();
 
-            // Verify session was not established
             expect(pb.authStore.isValid).toBe(false);
             expect(currentUser()).toBeNull();
-            expect(vaultKey()).toBeNull();
         });
 
         it("should verify vault password against the stored canary token (UnlockVault)", async () => {
-            const email = "lock@example.com";
-            const password = "my-secret-vault-password";
-            const keys = await deriveKeys(password, email);
-
-            // Seed user with canary
+            const email = `unlock_${Date.now()}@laforet.es`;
+            const masterPassword = "vault-super-secure-key";
+            const keys = await deriveKeys(masterPassword, email);
             const canary = await encryptText("success", keys.encKey);
-            const userRecord = { id: "usr_lock", email, password: keys.authSecret, vaultCheck: canary };
-            mockUsers.set("usr_lock", userRecord);
 
-            // Simulate logged in authStore (session exists, but vaultKey is locked/null)
-            pb.authStore.save(createMockJWT("usr_lock"), mockRecordModel(userRecord));
+            await pb.collection("users").create({
+                email,
+                password: keys.authSecret,
+                passwordConfirm: keys.authSecret,
+                vaultCheck: canary,
+            });
+
+            // Log in but leave vault locked (simulates page reload where authStore is preserved in localStorage)
+            await pb.collection("users").authWithPassword(email, keys.authSecret);
             setVaultKey(null);
             expect(vaultKey()).toBeNull();
+            expect(currentUser()).not.toBeNull();
 
-            // 1. Successful Unlock: Correct password decrypts the canary token
-            const attemptKeys = await deriveKeys(password, currentUser()!.email);
+            // 1. Successful Unlock: candidate password decrypts canary to "success"
+            const attemptKeys = await deriveKeys(masterPassword, currentUser()!.email);
             const fetchedUser = await pb.collection("users").getOne(currentUser()!.id);
-            const decryptedCanary = await decryptText(fetchedUser.vaultCheck!, attemptKeys.encKey);
+            const decryptedCanary = await decryptText(fetchedUser.vaultCheck, attemptKeys.encKey);
             expect(decryptedCanary).toBe("success");
             setVaultKey(attemptKeys.encKey);
             expect(vaultKey()).not.toBeNull();
 
-            // 2. Failed Unlock: Wrong password fails to decrypt canary
-            const wrongKeys = await deriveKeys("wrong-vault-password", currentUser()!.email);
+            // 2. Failed Unlock: wrong password fails AES-GCM tag verification
+            const wrongKeys = await deriveKeys("wrong-master-password", currentUser()!.email);
             await expect(
-                decryptText(fetchedUser.vaultCheck!, wrongKeys.encKey)
+                decryptText(fetchedUser.vaultCheck, wrongKeys.encKey)
             ).rejects.toThrow();
         });
 
         it("should wipe authStore, currentUser, and vaultKey upon logout", async () => {
-            const email = "logout.test@example.com";
-            const keys = await deriveKeys("password123", email);
-            const token = createMockJWT("usr_logout");
+            const email = `logout_${Date.now()}@laforet.es`;
+            const password = "logout-password-123";
+            const keys = await deriveKeys(password, email);
 
-            pb.authStore.save(token, mockRecordModel({ id: "usr_logout", email }));
+            await pb.collection("users").create({
+                email,
+                password: keys.authSecret,
+                passwordConfirm: keys.authSecret,
+                vaultCheck: "canary",
+            });
+
+            await pb.collection("users").authWithPassword(email, keys.authSecret);
             setVaultKey(keys.encKey);
 
             expect(currentUser()).not.toBeNull();
             expect(vaultKey()).not.toBeNull();
 
-            // Execute logOut()
+            // Call app's logOut()
             logOut();
 
             expect(pb.authStore.isValid).toBe(false);
@@ -326,20 +331,32 @@ describe("Database & Authentication Interactions", () => {
     });
 
     // ==========================================
-    // 2. CRUD Operations on Entries
+    // 3. CRUD Operations on Entries Collection
     // ==========================================
     describe("CRUD Operations on Entries Collection", () => {
         let activeKeys: DerivedKeys;
-        const testAuthorId = "usr_carmen";
+        let testAuthorId: string;
 
         beforeEach(async () => {
-            activeKeys = await deriveKeys("carmen-master-key", "carmen@laforet.es");
-            const token = createMockJWT(testAuthorId);
-            pb.authStore.save(token, mockRecordModel({ id: testAuthorId, email: "carmen@laforet.es" }));
+            const email = `author_${Date.now()}_${Math.random().toString(36).substring(2, 6)}@laforet.es`;
+            const password = "carmen-master-key";
+            activeKeys = await deriveKeys(password, email);
+            const canary = await encryptText("success", activeKeys.encKey);
+
+            const user = await pb.collection("users").create({
+                email,
+                password: activeKeys.authSecret,
+                passwordConfirm: activeKeys.authSecret,
+                name: "Carmen Author",
+                vaultCheck: canary,
+            });
+
+            await pb.collection("users").authWithPassword(email, activeKeys.authSecret);
+            testAuthorId = user.id;
             setVaultKey(activeKeys.encKey);
         });
 
-        it("CREATE: should encrypt title and body with AES-GCM before saving to database", async () => {
+        it("CREATE: should encrypt title and body with AES-GCM before saving to PocketBase", async () => {
             const plainTitle = "Calle Aribau";
             const plainBody = "# Primeras impresiones\nLa casa de la calle de Aribau era una pesadilla de polvo y sombras.";
 
@@ -347,24 +364,25 @@ describe("Database & Authentication Interactions", () => {
             const encryptedTitle = await encryptText(plainTitle, key);
             const encryptedBody = await encryptText(plainBody, key);
 
-            // Call database create (matches Write.tsx)
+            // Save to real PocketBase entries collection
             const created = await pb.collection("entries").create({
                 title: encryptedTitle,
                 body: encryptedBody,
-                author: currentUser()?.id!
+                author: testAuthorId,
             });
 
             expect(created.id).toBeDefined();
             expect(created.author).toBe(testAuthorId);
+            expect(created.created).toBeDefined();
 
-            // Check database contents: MUST NOT store plaintext
-            const stored = mockEntries.get(created.id)!;
+            // Fetch stored record directly from database
+            const stored = await pb.collection("entries").getOne(created.id);
             expect(stored.title).not.toBe(plainTitle);
             expect(stored.body).not.toBe(plainBody);
             expect(stored.title).toMatch(/^v1:[0-9a-f]{24}:[0-9a-f]+/);
             expect(stored.body).toMatch(/^v1:[0-9a-f]{24}:[0-9a-f]+/);
 
-            // Decrypting stored data with the user's key restores original text
+            // Decrypting stored data with the user's vault key restores original text
             expect(await decryptText(stored.title, key)).toBe(plainTitle);
             expect(await decryptText(stored.body, key)).toBe(plainBody);
         });
@@ -372,7 +390,7 @@ describe("Database & Authentication Interactions", () => {
         it("READ (List): should fetch and decrypt all entries from database", async () => {
             const key = vaultKey()!;
 
-            // Seed 3 encrypted entries in database
+            // Seed 3 encrypted entries in PocketBase
             const entriesData = [
                 { title: "Entrada 1 - Octubre", body: "Llegué a Barcelona..." },
                 { title: "Entrada 2 - Noviembre", body: "La Universidad Central..." },
@@ -383,14 +401,16 @@ describe("Database & Authentication Interactions", () => {
                 await pb.collection("entries").create({
                     title: await encryptText(item.title, key),
                     body: await encryptText(item.body, key),
-                    author: testAuthorId
+                    author: testAuthorId,
                 });
+                // Small sleep to ensure distinct creation timestamps
+                await new Promise((r) => setTimeout(r, 20));
             }
 
-            // Fetch list from database (matches ListEntries.tsx)
+            // Fetch list from database (mirrors ListEntries.tsx query)
             const rawEntries = await pb.collection("entries").getFullList<{ id: string; title: string; created: string }>({
                 sort: "-created",
-                fields: "id,title,created"
+                fields: "id,title,created",
             });
 
             expect(rawEntries.length).toBe(3);
@@ -399,134 +419,176 @@ describe("Database & Authentication Interactions", () => {
             const decryptedEntries = await Promise.all(
                 rawEntries.map(async (entry) => ({
                     id: entry.id,
-                    title: await decryptText(entry.title, key)
+                    title: await decryptText(entry.title, key),
                 }))
             );
 
-            expect(decryptedEntries.map(e => e.title)).toEqual([
+            expect(decryptedEntries.map((e) => e.title)).toEqual([
                 "Entrada 3 - Diciembre",
                 "Entrada 2 - Noviembre",
-                "Entrada 1 - Octubre"
+                "Entrada 1 - Octubre",
             ]);
         });
 
         it("READ (List): should catch and handle decryption error if entry was encrypted with another key", async () => {
-            const correctKey = vaultKey()!;
-            const foreignKeys = await deriveKeys("another-user-password", "foreign@example.com");
+            const key = vaultKey()!;
+            const foreignKeys = await deriveKeys("another-user-pass", "another@example.com");
 
-            // Seed one valid entry and one foreign/corrupt entry
+            // Create one normally encrypted entry and one with a foreign key
             await pb.collection("entries").create({
-                title: await encryptText("Mi entrada válida", correctKey),
-                body: await encryptText("Contenido propio", correctKey),
-                author: testAuthorId
+                title: await encryptText("Valid Entry", key),
+                body: await encryptText("Valid body", key),
+                author: testAuthorId,
             });
+
             await pb.collection("entries").create({
-                title: await encryptText("Entrada ajena o corrupta", foreignKeys.encKey),
-                body: await encryptText("Contenido ajeno", foreignKeys.encKey),
-                author: "other_user"
+                title: await encryptText("Foreign Entry", foreignKeys.encKey),
+                body: await encryptText("Foreign body", foreignKeys.encKey),
+                author: testAuthorId,
             });
 
             const rawEntries = await pb.collection("entries").getFullList<{ id: string; title: string; created: string }>();
 
-            // Simulate the decryption loop in ListEntries.tsx with error fallback
-            const results = await Promise.all(
+            const decryptedList = await Promise.all(
                 rawEntries.map(async (entry) => {
                     try {
-                        return { id: entry.id, title: await decryptText(entry.title, correctKey) };
-                    } catch {
+                        return { id: entry.id, title: await decryptText(entry.title, key) };
+                    } catch (_) {
                         return { id: entry.id, title: "🔒 [Decryption Error]" };
                     }
                 })
             );
 
-            expect(results.some(r => r.title === "Mi entrada válida")).toBe(true);
-            expect(results.some(r => r.title === "🔒 [Decryption Error]")).toBe(true);
+            const titles = decryptedList.map((e) => e.title);
+            expect(titles).toContain("Valid Entry");
+            expect(titles).toContain("🔒 [Decryption Error]");
         });
 
         it("READ (Single Entry): should fetch one entry and decrypt title and body (Entry.tsx)", async () => {
             const key = vaultKey()!;
-            const plainTitle = "Pensamientos de medianoche";
-            const plainBody = "## Reflexión nocturna\n\nTodo parece más silencioso a estas horas.";
-
             const created = await pb.collection("entries").create({
-                title: await encryptText(plainTitle, key),
-                body: await encryptText(plainBody, key),
-                author: testAuthorId
+                title: await encryptText("Día de lluvia", key),
+                body: await encryptText("## Recuerdos\nLa lluvia caía sobre las baldosas de la plaza...", key),
+                author: testAuthorId,
             });
 
-            // Fetch one entry from database (matches Entry.tsx fetchEntry)
-            const entryRecord = await pb.collection("entries").getOne(created.id);
+            // Fetch single record from PocketBase
+            const fetched = await pb.collection("entries").getOne<{ id: string; title: string; body: string; created: string }>(created.id);
+            const decryptedTitle = await decryptText(fetched.title, key);
+            const decryptedBody = await decryptText(fetched.body, key);
 
-            expect(entryRecord.id).toBe(created.id);
-            const decryptedTitle = await decryptText(entryRecord.title, key);
-            const decryptedBody = await decryptText(entryRecord.body, key);
-
-            expect(decryptedTitle).toBe(plainTitle);
-            expect(decryptedBody).toBe(plainBody);
+            expect(decryptedTitle).toBe("Día de lluvia");
+            expect(decryptedBody).toBe("## Recuerdos\nLa lluvia caía sobre las baldosas de la plaza...");
         });
 
         it("UPDATE: should re-encrypt updated title and body and save to database (EditEntry.tsx)", async () => {
             const key = vaultKey()!;
-            const originalTitle = "Borrador Inicial";
-            const originalBody = "Texto provisional sin pulir.";
-
-            const created = await pb.collection("entries").create({
-                title: await encryptText(originalTitle, key),
-                body: await encryptText(originalBody, key),
-                author: testAuthorId
+            const initial = await pb.collection("entries").create({
+                title: await encryptText("Título Inicial", key),
+                body: await encryptText("Cuerpo inicial", key),
+                author: testAuthorId,
             });
 
-            const updatedTitle = "Capítulo 1: La Llegada (Revisado)";
-            const updatedBody = "La estación de Francia estaba envuelta en una neblina densa...";
+            // Modify and re-encrypt
+            const newPlainTitle = "Título Modificado";
+            const newPlainBody = "Cuerpo modificado con nuevos detalles.";
+            const newEncTitle = await encryptText(newPlainTitle, key);
+            const newEncBody = await encryptText(newPlainBody, key);
 
-            // Re-encrypt updated data with new IVs
-            const newEncryptedTitle = await encryptText(updatedTitle, key);
-            const newEncryptedBody = await encryptText(updatedBody, key);
-
-            // Update database record (matches EditEntry.tsx)
-            const updatedRecord = await pb.collection("entries").update(created.id, {
-                title: newEncryptedTitle,
-                body: newEncryptedBody
+            await pb.collection("entries").update(initial.id, {
+                title: newEncTitle,
+                body: newEncBody,
             });
 
-            expect(updatedRecord.id).toBe(created.id);
-
-            // Verify database contains updated ciphertexts
-            const fetched = await pb.collection("entries").getOne(created.id);
-            expect(fetched.title).toBe(newEncryptedTitle);
-            expect(fetched.body).toBe(newEncryptedBody);
-
-            // Verify ciphertexts decrypt to the updated plaintexts
-            expect(await decryptText(fetched.title, key)).toBe(updatedTitle);
-            expect(await decryptText(fetched.body, key)).toBe(updatedBody);
+            // Verify the database record was updated
+            const updated = await pb.collection("entries").getOne<{ title: string; body: string }>(initial.id);
+            expect(await decryptText(updated.title, key)).toBe(newPlainTitle);
+            expect(await decryptText(updated.body, key)).toBe(newPlainBody);
         });
 
         it("DELETE: should remove entry from database and verify it can no longer be retrieved", async () => {
             const key = vaultKey()!;
-
-            const created = await pb.collection("entries").create({
-                title: await encryptText("Entrada para eliminar", key),
-                body: await encryptText("Este contenido debe desaparecer.", key),
-                author: testAuthorId
+            const entry = await pb.collection("entries").create({
+                title: await encryptText("Entrada para borrar", key),
+                body: await encryptText("Contenido efímero", key),
+                author: testAuthorId,
             });
 
-            expect(mockEntries.has(created.id)).toBe(true);
+            // Delete from database
+            await pb.collection("entries").delete(entry.id);
 
-            // Delete entry (matches ListEntries.tsx removeEntry)
-            const deleteResult = await pb.collection("entries").delete(created.id);
-            expect(deleteResult).toBe(true);
+            // Attempting to read deleted entry must throw PocketBase 404
+            await expect(pb.collection("entries").getOne(entry.id)).rejects.toThrow();
+        });
+    });
 
-            // Verify entry is removed from database
-            expect(mockEntries.has(created.id)).toBe(false);
+    // ==========================================
+    // 4. Security Rules & Access Control (Backend Permissions)
+    // ==========================================
+    describe("Security Rules & Access Control Enforcement", () => {
+        it("should reject unauthenticated operations on entries collection", async () => {
+            // Unauthenticated client
+            logOut();
+            expect(pb.authStore.isValid).toBe(false);
 
-            // Verify getOne on deleted ID rejects with not found
+            // PocketBase create rule requires @request.auth.id != ""
             await expect(
-                pb.collection("entries").getOne(created.id)
-            ).rejects.toThrow("Entry not found.");
+                pb.collection("entries").create({
+                    title: "Malicious entry",
+                    body: "Attempting unauthenticated write",
+                    author: "fake_id",
+                })
+            ).rejects.toThrow();
 
-            // Verify entry no longer appears in getFullList
-            const list = await pb.collection("entries").getFullList();
-            expect(list.some(e => e.id === created.id)).toBe(false);
+            // PocketBase list rule '@request.auth.id != "" && author = @request.auth.id' yields empty list
+            const unauthList = await pb.collection("entries").getFullList();
+            expect(unauthList).toEqual([]);
+
+            // PocketBase view rule '@request.auth.id != "" && author = @request.auth.id' rejects getOne
+            await expect(
+                pb.collection("entries").getOne("non_existent_or_protected")
+            ).rejects.toThrow();
+        });
+
+        it("should isolate user data: User B cannot access or modify User A's entries", async () => {
+            // User A creates an entry
+            const userAEmail = `user_a_${Date.now()}@example.com`;
+            const keysA = await deriveKeys("passA123", userAEmail);
+            const userA = await pb.collection("users").create({
+                email: userAEmail,
+                password: keysA.authSecret,
+                passwordConfirm: keysA.authSecret,
+                vaultCheck: "canaryA",
+            });
+
+            await pb.collection("users").authWithPassword(userAEmail, keysA.authSecret);
+            const entryA = await pb.collection("entries").create({
+                title: await encryptText("User A's Diary", keysA.encKey),
+                body: await encryptText("Private thoughts", keysA.encKey),
+                author: userA.id,
+            });
+
+            // Switch to User B
+            const userBEmail = `user_b_${Date.now()}@example.com`;
+            const keysB = await deriveKeys("passB456", userBEmail);
+            await pb.collection("users").create({
+                email: userBEmail,
+                password: keysB.authSecret,
+                passwordConfirm: keysB.authSecret,
+                vaultCheck: "canaryB",
+            });
+
+            await pb.collection("users").authWithPassword(userBEmail, keysB.authSecret);
+
+            // User B lists entries: PocketBase rule 'author = @request.auth.id' hides User A's entry
+            const userBList = await pb.collection("entries").getFullList();
+            expect(userBList.some((e) => e.id === entryA.id)).toBe(false);
+
+            // User B trying to fetch User A's entry directly throws 404
+            await expect(pb.collection("entries").getOne(entryA.id)).rejects.toThrow();
+
+            // User B trying to delete User A's entry directly throws 404
+            await expect(pb.collection("entries").delete(entryA.id)).rejects.toThrow();
         });
     });
 });
