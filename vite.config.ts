@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import solid from 'vite-plugin-solid'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
@@ -80,5 +80,11 @@ export default defineConfig({
 
   optimizeDeps: {
     include: ['debug']
+  },
+
+  test: {
+    include: ['src/**/*.test.ts'],
+    exclude: ['tests/**', 'node_modules/**'],
+    environment: 'jsdom'
   }
 })
