@@ -1,11 +1,13 @@
 import { createSignal } from "solid-js";
-import { pb, currentUser } from "../lib/pocketbase";
+import { useNavigate } from "@solidjs/router";
+import { pb, currentUser, logOut } from "../lib/pocketbase";
 import { deriveKeys, decryptText, setVaultKey } from "../lib/crypto";
 import { useLocale } from "../i18n";
 import styles from './Auth.module.scss';
 
 export default function UnlockVault() {
     const { t } = useLocale();
+    const navigate = useNavigate();
     const [password, setPassword] = createSignal("");
     const [error, setError] = createSignal("");
 
@@ -23,6 +25,11 @@ export default function UnlockVault() {
         }
     };
 
+    const handleSignOut = () => {
+        logOut();
+        navigate("/");
+    };
+
     return (
         <div class={styles.authContainer}>
             <div class={styles.authCard}>
@@ -33,9 +40,13 @@ export default function UnlockVault() {
                         placeholder={t("unlock_password")}
                         value={password()}
                         onInput={(e) => setPassword(e.currentTarget.value)}
+                        autocomplete="current-password"
                     />
                     <button class={styles.primaryBtn} type="submit">{t("unlock_submit")}</button>
-                    {error() && <p style={{ color: "red"}}>{error()}</p>}
+                    {error() && <p>{error()}</p>}
+                    <button type="button" class={styles.signOutBtn} onClick={handleSignOut}>
+                        {t("unlock_signout")}
+                    </button>
                 </form>
             </div>
         </div>

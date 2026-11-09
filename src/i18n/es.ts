@@ -41,6 +41,7 @@ export const es = {
     unlock_title: "Desbloquea tu Diario",
     unlock_password: "Contraseña de la bóveda",
     unlock_submit: "Desbloquear",
+    unlock_signout: "Cerrar Sesión",
     unlock_error: "Contraseña incorrecta. Por favor, inténtalo de nuevo.",
 
     // Reader (Entry)

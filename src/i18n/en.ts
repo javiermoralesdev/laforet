@@ -41,6 +41,7 @@ export const en = {
     unlock_title: "Unlock your Diary",
     unlock_password: "Vault Password",
     unlock_submit: "Unlock",
+    unlock_signout: "Sign Out",
     unlock_error: "Incorrect vault password. Please try again.",
 
     // Reader (Entry)
