@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { pb } from "../lib/pocketbase";
 import { useNavigate } from "@solidjs/router";
 import Modal from "../lib/Modal";
@@ -8,10 +8,26 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { useLocale } from "../i18n";
 import styles from './ListEntries.module.scss';
 
-interface EntrySummary {
+export interface EntrySummary {
     id: string;
     title: string;
     created: string;
+}
+
+export function filterEntriesByTitle<T extends { title: string }>(entries: T[], query: string): T[] {
+    const trimmed = query.trim();
+    if (!trimmed) return entries;
+
+    const normalize = (s: string) =>
+        s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    const tokens = normalize(trimmed).split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return entries;
+
+    return entries.filter((entry) => {
+        const normTitle = normalize(entry.title);
+        return tokens.every((token) => normTitle.includes(token));
+    });
 }
 
 function logOut() {
@@ -43,6 +59,9 @@ export default function ListEntry() {
     const [modalMessage, setModalMessage] = createSignal("");
     const [isErrorOpen, setErrorOpen] = createSignal(false);
     const [entryToDelete, setEntryToDelete] = createSignal<EntrySummary | null>(null);
+    const [searchQuery, setSearchQuery] = createSignal("");
+
+    const filteredEntries = createMemo(() => filterEntriesByTitle(entries() || [], searchQuery()));
 
     function promptDelete(entry: EntrySummary) {
         setEntryToDelete(entry);
@@ -89,27 +108,82 @@ export default function ListEntry() {
                 <Show when={entries.error}>
                     <p>{t("error")} {entries.error.message}</p>
                 </Show>
+
+                {/* Client-side Search by Title */}
+                <Show when={!entries.loading && !entries.error && ((entries()?.length ?? 0) > 0 || searchQuery().trim() !== "")}>
+                    <div class={styles.searchContainer}>
+                        <div class={styles.searchWrapper}>
+                            <input
+                                type="text"
+                                class={styles.searchInput}
+                                placeholder={t("list_search_placeholder")}
+                                value={searchQuery()}
+                                onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Escape") setSearchQuery("");
+                                }}
+                                aria-label={t("list_search_placeholder")}
+                            />
+                            <svg
+                                class={styles.searchIcon}
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <Show when={searchQuery().trim() !== ""}>
+                                <button
+                                    type="button"
+                                    class={styles.clearBtn}
+                                    onClick={() => setSearchQuery("")}
+                                    aria-label={t("list_search_clear")}
+                                    title={t("list_search_clear")}
+                                >
+                                    ✕
+                                </button>
+                            </Show>
+                        </div>
+                    </div>
+                </Show>
                 
-                <ul class={styles.entryList}>
-                    <For each={entries()} fallback={<p>{t("list_empty")}</p>}>
-                        {(entry) => (
-                            <li class={styles.entryCard}>
-                                <div class={styles.entryInfo}>
-                                    <h3><a href={"/entry/" + entry.id}>{entry.title}</a></h3>
-                                    <small>{new Date(entry.created).toLocaleString()}</small>
-                                </div>
-                                <div class={styles.entryActions}>
-                                    <button onClick={() => navigate("/edit/" + entry.id)}>
-                                        {t("list_edit")}
-                                    </button>
-                                    <button class={styles.deleteBtn} onClick={() => promptDelete(entry)}>
-                                        {t("list_remove")}
-                                    </button>
-                                </div>
-                            </li>
-                        )}
-                    </For>
-                </ul>
+                <Show when={!entries.loading && !entries.error}>
+                    <Show 
+                        when={(entries()?.length ?? 0) > 0} 
+                        fallback={<p>{t("list_empty")}</p>}
+                    >
+                        <Show 
+                            when={filteredEntries().length > 0} 
+                            fallback={<p>{t("list_no_results")}</p>}
+                        >
+                            <ul class={styles.entryList}>
+                                <For each={filteredEntries()}>
+                                    {(entry) => (
+                                        <li class={styles.entryCard}>
+                                            <div class={styles.entryInfo}>
+                                                <h3><a href={"/entry/" + entry.id}>{entry.title}</a></h3>
+                                                <small>{new Date(entry.created).toLocaleString()}</small>
+                                            </div>
+                                            <div class={styles.entryActions}>
+                                                <button onClick={() => navigate("/edit/" + entry.id)}>
+                                                    {t("list_edit")}
+                                                </button>
+                                                <button class={styles.deleteBtn} onClick={() => promptDelete(entry)}>
+                                                    {t("list_remove")}
+                                                </button>
+                                            </div>
+                                        </li>
+                                    )}
+                                </For>
+                            </ul>
+                        </Show>
+                    </Show>
+                </Show>
 
                 {/* Delete Confirmation Modal */}
                 <Modal 

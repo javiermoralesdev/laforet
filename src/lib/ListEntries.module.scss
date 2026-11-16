@@ -171,6 +171,110 @@
     }
   }
 
+  .searchContainer {
+    margin-bottom: 2rem;
+    width: 100%;
+
+    @media (max-width: 640px) {
+      margin-bottom: 1.25rem;
+    }
+  }
+
+  .searchWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .searchInput {
+    width: 100%;
+    padding: 0.75rem 2.5rem 0.75rem 2.85rem;
+    background-color: var(--surface-color);
+    border: 1px solid var(--surface-border-strong);
+    border-radius: 6px;
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    color: var(--text-main);
+    box-shadow: var(--shadow-paper-subtle);
+    box-sizing: border-box;
+    min-height: 44px;
+    transition: all 0.2s ease;
+
+    &::placeholder {
+      color: var(--text-faint);
+      font-style: italic;
+      font-family: var(--font-serif);
+    }
+
+    &:focus {
+      outline: none;
+      background-color: #fffefb;
+      border-color: var(--primary-accent);
+      box-shadow: 0 0 0 3px var(--primary-accent-glow), var(--shadow-paper-subtle);
+
+      ~ .searchIcon {
+        color: var(--primary-accent);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      font-size: 0.92rem;
+      padding: 0.65rem 2.25rem 0.65rem 2.5rem;
+      min-height: 42px;
+    }
+  }
+
+  .searchIcon {
+    position: absolute;
+    left: 1.1rem;
+    width: 1.15rem;
+    height: 1.15rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    opacity: 0.65;
+    transition: all 0.2s ease;
+
+    @media (max-width: 640px) {
+      left: 0.85rem;
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+  }
+
+  .clearBtn {
+    position: absolute;
+    right: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.25rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+
+    &:hover {
+      color: var(--text-main);
+      background-color: var(--surface-alt);
+    }
+
+    &:active {
+      transform: translateY(-50%) scale(0.92);
+    }
+
+    @media (max-width: 640px) {
+      right: 0.5rem;
+    }
+  }
+
   /* Quiet placeholder states (loading, empty) */
   > p, .entryList > p {
     text-align: center;
